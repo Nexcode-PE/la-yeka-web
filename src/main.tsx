@@ -7,6 +7,7 @@ import './styles/account-pages.css'
 import './styles/logo.css'
 import './styles/demo.css'
 import './styles/assets.css'
+import './styles/responsive.css'
 
 type Product = { name: string; detail: string; price: number; category: string; tag?: string }
 type CartItem = Product & { qty: number }
