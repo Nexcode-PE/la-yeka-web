@@ -1,0 +1,19 @@
+/* Asset paths live in public/images so they remain easy to replace from VS Code. */
+.hero {
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, .97) 0%, rgba(0, 0, 0, .78) 38%, rgba(0, 0, 0, .05) 67%), url('/images/hero-yeka.png');
+}
+
+.brand img {
+  content: url('/images/logo-la-yeka-v2.png');
+}
+
+/* The contact number stays in the checkout/WhatsApp flow, not in the footer. */
+footer .phone {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .hero {
+    background-image: linear-gradient(90deg, rgba(12, 8, 5, .9), rgba(12, 8, 5, .23)), url('/images/hero-yeka.png');
+  }
+}
