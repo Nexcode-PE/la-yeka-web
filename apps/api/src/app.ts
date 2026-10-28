@@ -50,7 +50,7 @@ app.get('/admin/dashboard', async (c) => {
   return c.json({
     salesToday: todayOrders.reduce((total, order) => total + Number(order.total), 0),
     ordersToday: todayOrders.length, pending, totalProducts, availableProducts, recentOrders,
-    paymentBreakdown: Object.fromEntries(['CASH','YAPE','TRANSFER','CARD'].map((method) => [method, todayOrders.filter((order) => order.paymentMethod === method).reduce((total, order) => total + Number(order.total), 0)])),
+    paymentBreakdown: Object.fromEntries(['CASH','YAPE'].map((method) => [method, todayOrders.filter((order) => order.paymentMethod === method).reduce((total, order) => total + Number(order.total), 0)])),
   })
 })
 const productInput = z.object({
@@ -72,7 +72,7 @@ app.patch('/admin/claims/:id', async (c) => { if (!await requireAdmin(c.req.head
 
 const orderInput = z.object({
   customerName:z.string().min(2), customerPhone:z.string().min(6), notes:z.string().max(500).optional(),
-  fulfillment:z.enum(['DELIVERY','PICKUP']).default('DELIVERY'), paymentMethod:z.enum(['CASH','YAPE','TRANSFER','CARD']).default('CASH'),
+  fulfillment:z.enum(['DELIVERY','PICKUP']).default('DELIVERY'), paymentMethod:z.enum(['CASH','YAPE']).default('CASH'),
   address:z.string().trim().min(5).max(250).optional(), district:z.string().trim().min(2).max(80).optional(),
   items:z.array(z.object({ productId:z.string().uuid(), quantity:z.number().int().min(1).max(20) })).min(1),
 }).superRefine((data, context) => { if (data.fulfillment === 'DELIVERY' && (!data.address || !data.district)) context.addIssue({ code:'custom', message:'Indica dirección y distrito para el delivery.' }) })

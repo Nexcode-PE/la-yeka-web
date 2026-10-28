@@ -36,7 +36,7 @@ type Order = {
   status: string;
   createdAt: string;
   fulfillment: 'DELIVERY' | 'PICKUP';
-  paymentMethod: 'CASH' | 'YAPE' | 'TRANSFER' | 'CARD';
+  paymentMethod: 'CASH' | 'YAPE';
   address: string | null;
   district: string | null;
   items: Array<{ productName: string; quantity: number }>;
@@ -69,8 +69,6 @@ const labels: Record<string, string> = {
   PICKUP: 'Recojo en local',
   CASH: 'Efectivo',
   YAPE: 'Yape',
-  TRANSFER: 'Transferencia',
-  CARD: 'Tarjeta',
 };
 const statusOptions = {
   orders: ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED'],
