@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter @la-yeka/client build",
+  "buildCommand": "pnpm --filter @la-yeka/database generate && pnpm --filter @la-yeka/client build",
   "outputDirectory": "apps/client/dist",
   "rewrites": [
     {
