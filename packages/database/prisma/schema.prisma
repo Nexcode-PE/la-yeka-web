@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String?
+  email     String   @unique
+  passwordHash String? @map("password_hash")
+  role      UserRole @default(CUSTOMER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  orders    Order[]
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String    @unique
+  position  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  products  Product[]
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(uuid()) @db.Uuid
+  categoryId  String?   @map("category_id") @db.Uuid
+  name        String
+  description String?
+  price       Decimal   @db.Decimal(8, 2)
+  imagePath   String?   @map("image_path")
+  isAvailable Boolean   @default(true) @map("is_available")
+  isFeatured  Boolean   @default(false) @map("is_featured")
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems  OrderItem[]
+  @@index([categoryId])
+  @@map("products")
+}
+
+model Order {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String?     @map("user_id") @db.Uuid
+  customerName  String?     @map("customer_name")
+  customerPhone String?     @map("customer_phone")
+  notes         String?
+  total         Decimal     @db.Decimal(8, 2)
+  status        OrderStatus @default(PENDING)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  user          User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  @@index([userId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  orderId     String   @map("order_id") @db.Uuid
+  productId   String?  @map("product_id") @db.Uuid
+  productName String   @map("product_name")
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(8, 2)
+  quantity    Int
+  createdAt   DateTime @default(now()) @map("created_at")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model Claim {
+  id            String   @id @default(uuid()) @db.Uuid
+  customerName  String   @map("customer_name")
+  document      String
+  email         String
+  phone         String
+  kind          ClaimKind
+  orderReference String? @map("order_reference")
+  detail        String
+  requestedSolution String @map("requested_solution")
+  status        ClaimStatus @default(RECEIVED)
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@map("claims")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  READY
+  CANCELLED
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum ClaimKind {
+  COMPLAINT
+  SERVICE_ISSUE
+}
+
+enum ClaimStatus {
+  RECEIVED
+  IN_REVIEW
+  RESOLVED
+}

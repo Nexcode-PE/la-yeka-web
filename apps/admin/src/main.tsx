@@ -1,0 +1,458 @@
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  ClipboardList,
+  CircleDollarSign,
+  Filter,
+  LogOut,
+  Package,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  TriangleAlert,
+} from 'lucide-react';
+import './styles.css';
+
+type Product = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  isAvailable: boolean;
+  category: { name: string } | null;
+};
+type Order = {
+  id: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  total: string;
+  status: string;
+  createdAt: string;
+  items: Array<{ productName: string; quantity: number }>;
+};
+type Claim = {
+  id: string;
+  customerName: string;
+  email: string;
+  kind: string;
+  detail: string;
+  status: string;
+  createdAt: string;
+};
+type View = 'products' | 'orders' | 'claims';
+const api = import.meta.env.VITE_API_URL || '';
+const labels: Record<string, string> = {
+  PENDING: 'Pendiente',
+  CONFIRMED: 'Confirmado',
+  PREPARING: 'En preparación',
+  READY: 'Listo',
+  CANCELLED: 'Cancelado',
+  RECEIVED: 'Recibido',
+  IN_REVIEW: 'En revisión',
+  RESOLVED: 'Resuelto',
+  COMPLAINT: 'Reclamo',
+  SERVICE_ISSUE: 'Queja',
+};
+const statusOptions = {
+  orders: ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED'],
+  claims: ['RECEIVED', 'IN_REVIEW', 'RESOLVED'],
+};
+
+function Admin() {
+  const [token, setToken] = useState(() => sessionStorage.getItem('la-yeka-admin-token') || '');
+  const [user, setUser] = useState(() => sessionStorage.getItem('la-yeka-admin-user') || '');
+  const [view, setView] = useState<View>('products');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [productQuery, setProductQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'paused'>('all');
+  const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState('');
+  const request = useCallback(
+    async (path: string, init: RequestInit = {}) => {
+      if (!api) throw new Error('Configura VITE_API_URL para conectar la administración.');
+      const response = await fetch(`${api}/api${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(init.headers || {}),
+        },
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'No se pudo completar la operación.');
+      }
+      return response.json();
+    },
+    [token],
+  );
+  const load = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    setError('');
+    try {
+      if (view === 'products') setProducts(await request('/admin/products'));
+      if (view === 'orders') setOrders(await request('/admin/orders'));
+      if (view === 'claims') setClaims(await request('/admin/claims'));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo conectar con la API.');
+    } finally {
+      setLoading(false);
+    }
+  }, [request, token, view]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  useEffect(() => {
+    setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
+  }, [products]);
+  const login = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    const fields = new FormData(event.currentTarget);
+    try {
+      const session = await request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: fields.get('email'), password: fields.get('password') }),
+      });
+      if (session.user.role !== 'ADMIN')
+        throw new Error('Esta cuenta no tiene permisos administrativos.');
+      sessionStorage.setItem('la-yeka-admin-token', session.token);
+      sessionStorage.setItem('la-yeka-admin-user', session.user.name || session.user.email);
+      setToken(session.token);
+      setUser(session.user.name || session.user.email);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo iniciar sesión.');
+    }
+  };
+  const logout = () => {
+    sessionStorage.removeItem('la-yeka-admin-token');
+    sessionStorage.removeItem('la-yeka-admin-user');
+    setToken('');
+    setUser('');
+  };
+  const update = async (kind: 'products' | 'orders' | 'claims', id: string, data: object) => {
+    setSavingId(id);
+    try {
+      await request(`/admin/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
+    } finally {
+      setSavingId('');
+    }
+  };
+  const available = useMemo(
+    () => products.filter((product) => product.isAvailable).length,
+    [products],
+  );
+  const categories = useMemo(
+    () => [...new Set(products.map((product) => product.category?.name).filter(Boolean))] as string[],
+    [products],
+  );
+  const filteredProducts = useMemo(() => {
+    const query = productQuery.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesQuery = !query || `${product.name} ${product.description || ''}`.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === 'all' || product.category?.name === categoryFilter;
+      const matchesAvailability =
+        availabilityFilter === 'all' ||
+        (availabilityFilter === 'available' ? product.isAvailable : !product.isAvailable);
+      return matchesQuery && matchesCategory && matchesAvailability;
+    });
+  }, [availabilityFilter, categoryFilter, productQuery, products]);
+  if (!token)
+    return (
+      <main className="grid min-h-screen place-items-center bg-stone-950 px-5 py-10 text-stone-950">
+        <section className="w-full max-w-md rounded-[2rem] bg-stone-50 p-8 shadow-2xl sm:p-10">
+          <div className="mb-8 flex size-12 items-center justify-center rounded-2xl bg-amber-400">
+            <ShieldCheck />
+          </div>
+          <p className="text-xs font-black tracking-[0.2em] text-amber-700">LA YEKA · ADMIN</p>
+          <h1 className="mt-3 text-4xl font-black tracking-tight">Panel de operación</h1>
+          <p className="mt-3 text-sm leading-6 text-stone-600">
+            Gestiona catálogo, pedidos y solicitudes de clientes.
+          </p>
+          <form className="mt-8 grid gap-4" onSubmit={login}>
+            <label className="grid gap-2 text-sm font-bold">
+              Correo administrativo
+              <input
+                className="rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none ring-amber-400 focus:ring-2"
+                name="email"
+                type="email"
+                required
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-bold">
+              Contraseña
+              <input
+                className="rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none ring-amber-400 focus:ring-2"
+                name="password"
+                type="password"
+                minLength={10}
+                required
+              />
+            </label>
+            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+            <button
+              className="mt-2 rounded-xl bg-stone-950 px-4 py-3 font-bold text-white hover:bg-amber-500 hover:text-stone-950"
+              type="submit"
+            >
+              Ingresar al panel
+            </button>
+          </form>
+        </section>
+      </main>
+    );
+  return (
+    <main className="min-h-screen bg-[#f6f4ef] text-stone-950">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-stone-950 text-white shadow-xl shadow-black/10">
+        <div className="flex min-h-20 w-full items-center justify-between gap-5 px-5 sm:px-8 lg:px-10">
+          <div>
+            <p className="text-xs font-black tracking-[0.2em] text-amber-400">
+              LA YEKA · ADMINISTRACIÓN
+            </p>
+            <h1 className="mt-1 text-lg font-black sm:text-xl">Hola, {user}</h1>
+          </div>
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-2 rounded-lg border border-stone-700 px-3 py-2 text-sm font-bold hover:border-amber-400"
+          >
+            <LogOut size={16} />
+            Salir
+          </button>
+        </div>
+      </header>
+      <div className="grid w-full gap-0 xl:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside className="border-b border-stone-200 bg-white px-4 py-4 xl:min-h-[calc(100vh-5rem)] xl:border-b-0 xl:border-r xl:px-5 xl:py-7">
+          <div className="mb-5 hidden px-3 xl:block">
+            <p className="text-xs font-black tracking-[0.18em] text-stone-400">MÓDULOS</p>
+          </div>
+          <nav className="grid gap-1">
+            {(
+              [
+                { id: 'products', label: 'Catálogo', icon: Package },
+                { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+                { id: 'claims', label: 'Reclamos', icon: ClipboardList },
+              ] as const
+            ).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setView(id)}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-amber-400 text-stone-950 shadow-sm' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-950'}`}
+              >
+                <Icon size={18} />
+                {label}
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <section className="min-w-0 px-5 py-7 sm:px-8 lg:px-10 xl:px-12">
+          {error && (
+            <p className="mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+              <TriangleAlert size={18} />
+              {error}
+            </p>
+          )}
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-black tracking-[0.2em] text-amber-700">OPERACIÓN</p>
+              <h2 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
+                {view === 'products'
+                  ? 'Catálogo'
+                  : view === 'orders'
+                    ? 'Pedidos'
+                    : 'Libro de reclamaciones'}
+              </h2>
+            </div>
+            <button
+              onClick={load}
+              className="inline-flex items-center gap-2 rounded-xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-500 hover:text-stone-950 disabled:cursor-wait"
+            >
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Actualizando…' : 'Actualizar datos'}
+            </button>
+          </div>
+          {view === 'products' && (
+            <>
+              <div className="mb-6 grid gap-4 sm:grid-cols-3">
+                <Stat value={products.length} label="Productos registrados" />
+                <Stat value={available} label="A la venta" tone="green" />
+                <Stat value={products.length - available} label="Pausados" tone="gray" />
+              </div>
+              <div className="mb-5 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                  <input value={productQuery} onChange={(event) => setProductQuery(event.target.value)} className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-amber-400 focus:bg-white" placeholder="Buscar por producto o ingrediente" />
+                </label>
+                <label className="relative">
+                  <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+                  <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-amber-400">
+                    <option value="all">Todas las categorías</option>
+                    {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                  </select>
+                </label>
+                <select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value as 'all' | 'available' | 'paused')} className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-400">
+                  <option value="all">Todo el estado</option>
+                  <option value="available">Disponibles</option>
+                  <option value="paused">Pausados</option>
+                </select>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <div className="hidden grid-cols-[minmax(0,1fr)_11rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
+                  <span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span>
+                </div>
+                {filteredProducts.map((product) => (
+                  <article
+                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[minmax(0,1fr)_11rem_10rem] md:items-center"
+                    key={product.id}
+                  >
+                    <div>
+                      <p className="font-black">{product.name}</p>
+                      <p className="mt-1 text-sm text-stone-500">
+                        <span className="font-semibold text-amber-700">{product.category?.name || 'Sin categoría'}</span> · {product.description || 'Sin descripción'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CircleDollarSign size={17} className="text-stone-500" />
+                      <input
+                        className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm font-bold outline-none focus:border-amber-400"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={draftPrices[product.id] ?? product.price}
+                        onChange={(event) => setDraftPrices((current) => ({ ...current, [product.id]: event.target.value }))}
+                      />
+                      {Number(draftPrices[product.id] ?? product.price) !== Number(product.price) && <button onClick={() => update('products', product.id, { price: Number(draftPrices[product.id]) })} disabled={savingId === product.id} className="rounded-lg bg-amber-400 px-2.5 py-2 text-xs font-black text-stone-950 hover:bg-amber-500">Guardar</button>}
+                    </div>
+                    <button
+                      onClick={() =>
+                        update('products', product.id, { isAvailable: !product.isAvailable })
+                      }
+                      disabled={savingId === product.id}
+                      className={`rounded-xl px-3 py-2 text-sm font-bold transition ${product.isAvailable ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-stone-200 text-stone-600 hover:bg-stone-300'}`}
+                    >
+                      {product.isAvailable ? 'Disponible' : 'Pausado'}
+                    </button>
+                  </article>
+                ))}
+                {filteredProducts.length === 0 && <Empty text="No encontramos productos con esos filtros." />}
+              </div>
+            </>
+          )}
+          {view === 'orders' && (
+            <div className="grid gap-4">
+              {orders.length === 0 ? (
+                <Empty text="Aún no hay pedidos registrados." />
+              ) : (
+                orders.map((order) => (
+                  <article className="rounded-2xl bg-white p-5 shadow-sm" key={order.id}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black">
+                          {order.customerName || 'Cliente sin nombre'} · S/{' '}
+                          {Number(order.total).toFixed(2)}
+                        </p>
+                        <p className="mt-1 text-sm text-stone-500">
+                          {order.customerPhone} ·{' '}
+                          {new Date(order.createdAt).toLocaleString('es-PE')}
+                        </p>
+                        <p className="mt-3 text-sm">
+                          {order.items
+                            .map((item) => `${item.quantity}× ${item.productName}`)
+                            .join(', ')}
+                        </p>
+                      </div>
+                      <Status
+                        value={order.status}
+                        options={statusOptions.orders}
+                        onChange={(status) => update('orders', order.id, { status })}
+                      />
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          )}
+          {view === 'claims' && (
+            <div className="grid gap-4">
+              {claims.length === 0 ? (
+                <Empty text="Aún no hay reclamos ni quejas." />
+              ) : (
+                claims.map((claim) => (
+                  <article className="rounded-2xl bg-white p-5 shadow-sm" key={claim.id}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black">
+                          {claim.customerName} · {labels[claim.kind]}
+                        </p>
+                        <p className="mt-1 text-sm text-stone-500">
+                          {claim.email} · {new Date(claim.createdAt).toLocaleDateString('es-PE')}
+                        </p>
+                        <p className="mt-3 text-sm leading-6">{claim.detail}</p>
+                      </div>
+                      <Status
+                        value={claim.status}
+                        options={statusOptions.claims}
+                        onChange={(status) => update('claims', claim.id, { status })}
+                      />
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+function Stat({ value, label, tone = 'amber' }: { value: number; label: string; tone?: 'amber' | 'green' | 'gray' }) {
+  const accents = {
+    amber: 'bg-amber-400',
+    green: 'bg-emerald-400',
+    gray: 'bg-stone-300',
+  };
+  return (
+    <article className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+      <span className={`absolute inset-x-0 top-0 h-1 ${accents[tone]}`} />
+      <strong className="block text-4xl font-black">{value}</strong>
+      <span className="mt-1 block text-sm text-stone-500">{label}</span>
+    </article>
+  );
+}
+function Empty({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-10 text-center text-stone-500 shadow-sm">{text}</div>
+  );
+}
+function Status({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  return (
+    <select
+      className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {labels[option]}
+        </option>
+      ))}
+    </select>
+  );
+}
+createRoot(document.getElementById('root')!).render(<Admin />);

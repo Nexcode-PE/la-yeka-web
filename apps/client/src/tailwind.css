@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-yeka-gold: #f7ad22;
+  --color-yeka-gold-dark: #d68912;
+  --color-yeka-ink: #050505;
+  --color-yeka-paper: #f7f4ee;
+  --font-sans: Manrope, Arial, sans-serif;
+  --font-display: "Archivo Black", Arial, sans-serif;
+  --font-mono: "DM Mono", monospace;
+}
+
+@layer base {
+  * { @apply box-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply m-0 overflow-x-hidden bg-white font-sans text-yeka-ink antialiased; }
+  button, a { font: inherit; -webkit-tap-highlight-color: transparent; }
+  button { @apply cursor-pointer; }
+  h1, h2, h3, p { @apply mt-0; }
+}
+
+@layer components {
+  .brand { @apply block w-[108px] leading-none no-underline md:w-[126px]; }
+  .brand img { @apply block h-auto w-full; }
+  .header-actions { @apply ml-auto; }
+  .account-button { @apply hidden items-center gap-2 rounded-full border border-yeka-gold/60 bg-transparent px-3 py-2 text-xs font-extrabold text-white hover:bg-yeka-gold hover:text-yeka-ink md:flex; }
+  .cart-button { @apply flex h-[38px] items-center gap-2 rounded-full border-0 bg-yeka-gold px-3 py-2 text-[0px] font-extrabold text-yeka-ink md:h-auto md:px-[17px] md:py-3 md:text-xs; }
+  .cart-button b { @apply grid size-[19px] place-items-center rounded-full bg-yeka-ink text-[11px] text-white; }
+  .eyebrow { @apply mb-[14px] flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[1.6px] text-yeka-gold-dark; }
+  .hero { @apply flex min-h-[510px] items-end bg-cover bg-center px-[22px] py-11 text-white md:min-h-[690px] md:items-center md:px-[10vw] md:py-[70px]; background-image: linear-gradient(90deg, rgba(0,0,0,.97) 0%, rgba(0,0,0,.78) 38%, rgba(0,0,0,.05) 67%), url('/images/hero-yeka.png'); background-position: 61% center; }
+  .hero-copy { @apply max-w-2xl; }
+  .hero .eyebrow { @apply text-yeka-gold; }
+  .hero h1 { @apply mb-6 font-display text-[clamp(43px,13vw,60px)] leading-[.98] tracking-[-2.8px] md:text-[clamp(48px,6.1vw,89px)] md:tracking-[-4px]; }
+  .hero h1 em { @apply not-italic text-yeka-gold; }
+  .lead { @apply mb-6 max-w-[310px] text-[15px] leading-relaxed text-[#f0e9df] md:mb-[31px] md:max-w-[500px] md:text-lg; }
+  .primary, .checkout { @apply inline-flex items-center gap-2 rounded bg-yeka-gold px-5 py-4 font-extrabold text-yeka-ink no-underline transition hover:-translate-y-0.5 hover:brightness-95; }
+  .hero-meta { @apply mt-[30px] flex gap-6 md:mt-14 md:gap-[35px]; }
+  .hero-meta span { @apply text-xs text-neutral-300; }
+  .hero-meta strong { @apply block font-display text-[21px] text-white md:text-[26px]; }
+  .delivery-banner { @apply flex flex-col justify-between gap-3 bg-yeka-ink px-5 py-[18px] text-white md:flex-row md:items-center md:px-[7vw] md:py-5; }
+  .delivery-banner > div { @apply flex items-center gap-3; }
+  .delivery-banner p { @apply mb-0 text-[11px] text-stone-400; }
+  .delivery-banner b { @apply text-xs; }
+  .delivery-dot { @apply size-2 rounded-full bg-yeka-gold; }
+  .delivery-banner button { @apply flex w-full items-center justify-center gap-1 rounded border border-yeka-gold px-4 py-2 text-xs font-extrabold text-yeka-gold md:w-auto; }
+  .featured { @apply bg-white px-4 py-[58px] md:px-[7vw] md:py-20; }
+  .section-head { @apply mx-auto mb-6 flex max-w-[1300px] items-start justify-between gap-3 md:mb-[33px] md:items-end md:gap-[35px]; }
+  .section-head h2, .intro h2, .extras h2, .drawer-top h2 { @apply mb-[18px] font-display text-[clamp(34px,10.5vw,46px)] leading-none tracking-[-2px] md:text-[clamp(34px,4vw,55px)] md:tracking-[-2.5px]; }
+  .section-head p:last-child { @apply max-w-[290px] text-[13px] leading-relaxed text-stone-500; }
+  .text-link { @apply flex shrink-0 items-center gap-1 border-0 bg-transparent text-[11px] font-extrabold underline decoration-yeka-gold decoration-2 underline-offset-4 md:text-xs; }
+  .featured-grid { @apply -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-auto md:grid md:max-w-[1300px] md:grid-cols-4 md:overflow-visible md:px-0; scrollbar-width: none; }
+  .featured-grid::-webkit-scrollbar, .filters::-webkit-scrollbar { display: none; }
+  .featured-card { @apply min-w-[min(79vw,286px)] snap-start overflow-hidden border border-stone-100 bg-yeka-paper md:min-w-0; }
+  .featured-card img { @apply h-[190px] w-full object-contain md:h-[230px]; }
+  .featured-card > div { @apply p-4; }
+  .featured-card h3 { @apply mb-1 text-sm font-extrabold; }
+  .featured-card p { @apply mb-4 min-h-8 text-[11px] leading-relaxed text-stone-500; }
+  .featured-card > div > div { @apply flex items-center justify-between; }
+  .featured-card strong { @apply font-mono text-sm; }
+  .featured-card button { @apply flex items-center gap-1 bg-yeka-ink px-3 py-2 text-[10px] font-bold text-white; }
+  .intro { @apply mx-auto max-w-[720px] px-[22px] py-[72px] text-center md:px-5 md:py-[125px]; }
+  .intro .eyebrow { @apply justify-center; }
+  .intro > p:last-child { @apply mb-0 text-sm leading-7 text-stone-500 md:text-base md:leading-[1.8]; }
+  .menu-section { @apply bg-yeka-paper px-4 py-[58px] md:px-[7vw] md:py-[80px]; }
+  .filters { @apply -mx-4 mb-[31px] flex gap-2 overflow-x-auto px-4 pb-2 md:mx-auto md:max-w-[1300px] md:px-0; }
+  .filters button { @apply whitespace-nowrap rounded-full border border-stone-300 bg-transparent px-4 py-2.5 text-xs font-extrabold; }
+  .filters button.selected { @apply border-yeka-ink bg-yeka-ink text-white; }
+  .grid { @apply mx-auto grid max-w-[1300px] grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-[15px]; }
+  .product { @apply relative min-h-[298px] overflow-hidden bg-white md:min-h-[350px]; }
+  .product label { @apply absolute top-[14px] left-[14px] z-10 bg-yeka-gold px-2 py-1 font-mono text-[9px] font-extrabold tracking-[.7px]; }
+  .product-art { @apply grid h-[132px] place-items-center overflow-hidden bg-[#ded3c1] md:h-[158px]; }
+  .product-art img { @apply max-h-[96%] max-w-[96%] object-contain; }
+  .product-info { @apply flex h-[166px] flex-col justify-between p-[13px] md:h-[192px] md:p-4; }
+  .product h3 { @apply mb-1 text-[13px] font-extrabold md:text-base; }
+  .product p { @apply mb-0 text-[10px] leading-relaxed text-stone-500 md:text-[11px]; }
+  .card-bottom { @apply flex items-center justify-between; }
+  .card-bottom strong { @apply font-mono text-sm md:text-base; }
+  .card-bottom button { @apply grid size-8 place-items-center rounded-full border-0 bg-yeka-ink text-white md:size-9; }
+  .extras { @apply flex flex-col gap-10 bg-yeka-ink px-[22px] py-[68px] text-white md:flex-row md:items-center md:justify-between md:px-[10vw] md:py-[90px]; }
+  .extras > div:first-child { @apply max-w-[430px]; }
+  .extras .eyebrow { @apply text-yeka-gold; }
+  .extras > div > p:last-child { @apply mb-0 text-sm leading-7 text-stone-300; }
+  .extra-list { @apply grid w-full max-w-[520px]; }
+  .extra-list button { @apply grid grid-cols-[1fr_auto_24px] items-center gap-3 border-b border-stone-700 py-4 text-left text-sm font-bold; }
+  .extra-list b { @apply font-mono text-xs text-yeka-gold; }
+  .location-section { @apply grid bg-yeka-gold md:grid-cols-[minmax(360px,.78fr)_1.22fr]; }
+  .location-copy { @apply px-[22px] py-[50px] md:px-[7vw] md:py-[72px]; }
+  .location-copy h2 { @apply mb-5 max-w-[410px] font-display text-[clamp(42px,12vw,56px)] leading-none tracking-[-2px] md:text-[clamp(40px,4.8vw,68px)]; }
+  .address-link { @apply flex w-full max-w-[380px] items-start gap-2 border-b border-black/20 py-4 pb-[22px] text-sm font-bold text-yeka-ink no-underline; }
+  .address-link small { @apply text-[11px] font-semibold text-[#5f4517]; }
+  .dispatch { @apply mt-[23px] w-full max-w-[380px]; }
+  .dispatch h3 { @apply mb-2 text-base font-extrabold; }
+  .dispatch > p:last-child { @apply mb-0 text-xs leading-relaxed; }
+  .map-frame { @apply block h-fit min-h-[265px] self-start overflow-hidden md:m-[22px_22px_22px_0] md:min-h-[346px] md:border-[8px] md:border-white md:shadow-[12px_12px_0_rgba(0,0,0,.11)]; }
+  .map-frame iframe { @apply block h-[265px] w-full border-0 md:h-[330px]; filter: saturate(.8) contrast(1.05); }
+  footer { @apply grid gap-7 bg-yeka-ink px-[22px] py-[42px] pb-[50px] text-white md:grid-cols-[2fr_1fr_1fr_1fr] md:gap-10 md:px-[7vw] md:py-16; }
+  footer h3 { @apply mb-3 text-xs font-extrabold; }
+  footer > div { @apply flex flex-col gap-2; }
+  footer a, .footer-link { @apply w-fit border-0 bg-transparent p-0 text-left text-xs text-stone-300 no-underline hover:text-yeka-gold; }
+  .footer-brand p { @apply mb-0 max-w-[180px] text-xs leading-relaxed text-stone-400; }
+  footer .brand { @apply mb-2 w-[142px]; }
+  .socials { @apply flex flex-row gap-2; }
+  .socials a { @apply grid size-9 place-items-center rounded-full border border-stone-700 p-2 text-yeka-gold; }
+  .socials svg { @apply size-4 fill-none stroke-current stroke-[1.7]; }
+  .drawer { @apply fixed inset-0 z-50; }
+  .overlay, .modal-backdrop { @apply absolute inset-0 bg-black/55; }
+  .panel { @apply absolute top-0 right-0 h-full w-full overflow-y-auto bg-white p-[22px_18px] pb-[max(22px,env(safe-area-inset-bottom))] shadow-2xl sm:w-[440px] sm:p-8; }
+  .drawer-top { @apply mb-7 flex items-start justify-between; }
+  .close { @apply grid size-10 place-items-center border-0 bg-transparent text-yeka-ink; }
+  .empty { @apply grid place-items-center gap-3 py-20 text-center text-stone-500; }
+  .empty h3 { @apply mb-0 text-xl font-extrabold text-yeka-ink; }
+  .empty p { @apply mb-2 text-sm; }
+  .cart-items { @apply grid divide-y divide-stone-200; }
+  .cart-item { @apply grid grid-cols-[1fr_auto_auto] items-center gap-3 py-4; }
+  .cart-item h3 { @apply mb-1 text-sm font-extrabold; }
+  .cart-item p { @apply mb-0 text-xs text-stone-500; }
+  .cart-item > strong { @apply font-mono text-sm; }
+  .qty { @apply flex items-center gap-2; }
+  .qty button { @apply grid size-7 place-items-center rounded-full border border-stone-200 bg-white; }
+  .qty b { @apply text-xs; }
+  .panel textarea { @apply mt-2 min-h-24 w-full resize-y border border-stone-200 bg-white p-3 text-sm outline-none focus:border-yeka-gold; }
+  .total { @apply my-5 flex items-center justify-between text-sm; }
+  .total strong { @apply font-mono text-xl; }
+  .checkout { @apply w-full justify-center border-0; }
+  .checkout:disabled { @apply cursor-not-allowed opacity-50 hover:translate-y-0; }
+  .secure { @apply mt-3 flex items-center justify-center gap-1 text-center text-[11px] text-stone-500; }
+  .modal { @apply fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6; }
+  .modal-card { @apply relative max-h-[91vh] w-full overflow-y-auto border-t-[7px] border-yeka-gold bg-gradient-to-br from-white via-white to-[#fff7e8] p-[34px_22px_26px] sm:max-w-[620px] sm:rounded sm:p-10; }
+  .modal-card > .close { @apply absolute top-3 right-3; }
+  .modal-card h2 { @apply mb-5 font-display text-[clamp(32px,7vw,48px)] leading-none tracking-[-2px]; }
+  .modal-lead { @apply mb-6 text-sm leading-relaxed text-stone-600; }
+  .legal-copy { @apply border-t border-stone-200 pt-3; }
+  .legal-copy p { @apply mb-0 border-b border-stone-200 py-3 text-sm leading-relaxed text-stone-600; }
+  .claim-form { @apply grid grid-cols-1 gap-4 sm:grid-cols-2; }
+  .claim-form label { @apply grid gap-1.5 text-xs font-bold; }
+  .claim-form .wide { @apply sm:col-span-2; }
+  .claim-form input, .claim-form select, .claim-form textarea { @apply w-full rounded border border-stone-300 bg-white p-3 text-sm font-normal outline-none focus:border-yeka-gold; }
+  .claim-form textarea { @apply min-h-24; }
+  .claim-form .check { @apply flex items-center gap-2 text-[11px] font-normal text-stone-600; }
+  .claim-form .check input { @apply size-4; }
+  .claim-success { @apply rounded bg-emerald-50 p-5 text-emerald-950; }
+  .claim-success h3 { @apply mb-2 font-extrabold; }
+  .claim-success p { @apply mb-0 text-sm; }
+}

@@ -1,4 +1,17 @@
 {
-  "compilerOptions": { "target": "ES2020", "useDefineForClassFields": true, "lib": ["DOM", "ESNext"], "types": ["vite/client", "node"], "allowJs": false, "skipLibCheck": true, "esModuleInterop": true, "allowSyntheticDefaultImports": true, "strict": true, "module": "ESNext", "moduleResolution": "Bundler", "resolveJsonModule": true, "isolatedModules": true, "noEmit": true, "tsBuildInfoFile": "./node_modules/.cache/la-yeka-tsconfig.tsbuildinfo", "jsx": "react-jsx" },
-  "include": ["src"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true
+  },
+  "include": [
+    "api/**/*.ts",
+    "apps/api/**/*.ts",
+    "packages/database/src/**/*.ts"
+  ]
 }
