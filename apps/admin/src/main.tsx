@@ -49,6 +49,7 @@ type Claim = {
 type Dashboard = { salesToday: number; ordersToday: number; pending: number; totalProducts: number; availableProducts: number; recentOrders: Order[] };
 type View = 'dashboard' | 'products' | 'orders' | 'claims';
 const api = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
+const brandLogo = '/images/logo-la-yeka-v2.png';
 const labels: Record<string, string> = {
   PENDING: 'Pendiente',
   CONFIRMED: 'Confirmado',
@@ -198,13 +199,18 @@ function Admin() {
   };
   if (!token)
     return (
-      <main className="grid min-h-screen place-items-center bg-stone-950 px-5 py-10 text-stone-950">
-        <section className="w-full max-w-md rounded-[2rem] bg-stone-50 p-8 shadow-2xl sm:p-10">
-          <div className="mb-8 flex size-12 items-center justify-center rounded-2xl bg-amber-400">
-            <ShieldCheck />
+      <main className="relative grid min-h-screen place-items-center overflow-hidden bg-stone-950 px-5 py-10 text-stone-950 before:absolute before:inset-x-0 before:top-0 before:h-2 before:bg-amber-400">
+        <div className="pointer-events-none absolute -left-20 -top-28 size-80 rounded-full bg-amber-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-orange-600/15 blur-3xl" />
+        <section className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/10 bg-stone-50 p-8 shadow-2xl shadow-black/40 sm:p-10">
+          <div className="-mx-8 -mt-8 mb-8 flex h-28 items-center justify-center bg-stone-950 sm:-mx-10 sm:-mt-10">
+            <img src={brandLogo} alt="La Yeka" className="h-20 w-auto object-contain" />
           </div>
-          <p className="text-xs font-black tracking-[0.2em] text-amber-700">LA YEKA · ADMIN</p>
-          <h1 className="mt-3 text-4xl font-black tracking-tight">Panel de operación</h1>
+          <div className="mb-7 flex items-center gap-3">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-amber-400"><ShieldCheck size={22} /></div>
+            <p className="text-xs font-black tracking-[0.2em] text-amber-700">LA YEKA · ADMIN</p>
+          </div>
+          <h1 className="text-4xl font-black tracking-tight">Panel de operación</h1>
           <p className="mt-3 text-sm leading-6 text-stone-600">
             Gestiona catálogo, pedidos y solicitudes de clientes.
           </p>
@@ -241,13 +247,16 @@ function Admin() {
     );
   return (
     <main className="min-h-screen bg-[#f6f4ef] text-stone-950">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-stone-950 text-white shadow-xl shadow-black/10">
+      <header className="sticky top-0 z-30 border-b border-amber-400/30 bg-stone-950 text-white shadow-xl shadow-black/20">
         <div className="flex min-h-20 w-full items-center justify-between gap-5 px-5 sm:px-8 lg:px-10">
-          <div>
-            <p className="text-xs font-black tracking-[0.2em] text-amber-400">
-              LA YEKA · ADMINISTRACIÓN
-            </p>
-            <h1 className="mt-1 text-lg font-black sm:text-xl">Hola, {user}</h1>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-14 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30 px-2 sm:h-16 sm:w-24">
+              <img src={brandLogo} alt="La Yeka" className="max-h-14 w-auto object-contain" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black tracking-[0.2em] text-amber-400 sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
+              <h1 className="mt-1 text-base font-black sm:text-xl">Hola, {user}</h1>
+            </div>
           </div>
           <button
             onClick={logout}
