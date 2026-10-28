@@ -2,8 +2,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
+  CircleDollarSign,
+  Filter,
   LogOut,
   Package,
+  RefreshCw,
+  Search,
   ShieldCheck,
   ShoppingBag,
   TriangleAlert,
@@ -64,6 +68,11 @@ function Admin() {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [productQuery, setProductQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'paused'>('all');
+  const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState('');
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       if (!api) throw new Error('Configura VITE_API_URL para conectar la administración.');
@@ -100,6 +109,9 @@ function Admin() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => {
+    setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
+  }, [products]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -126,17 +138,35 @@ function Admin() {
     setUser('');
   };
   const update = async (kind: 'products' | 'orders' | 'claims', id: string, data: object) => {
+    setSavingId(id);
     try {
       await request(`/admin/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
+    } finally {
+      setSavingId('');
     }
   };
   const available = useMemo(
     () => products.filter((product) => product.isAvailable).length,
     [products],
   );
+  const categories = useMemo(
+    () => [...new Set(products.map((product) => product.category?.name).filter(Boolean))] as string[],
+    [products],
+  );
+  const filteredProducts = useMemo(() => {
+    const query = productQuery.trim().toLowerCase();
+    return products.filter((product) => {
+      const matchesQuery = !query || `${product.name} ${product.description || ''}`.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === 'all' || product.category?.name === categoryFilter;
+      const matchesAvailability =
+        availabilityFilter === 'all' ||
+        (availabilityFilter === 'available' ? product.isAvailable : !product.isAvailable);
+      return matchesQuery && matchesCategory && matchesAvailability;
+    });
+  }, [availabilityFilter, categoryFilter, productQuery, products]);
   if (!token)
     return (
       <main className="grid min-h-screen place-items-center bg-stone-950 px-5 py-10 text-stone-950">
@@ -181,14 +211,14 @@ function Admin() {
       </main>
     );
   return (
-    <main className="min-h-screen bg-stone-100 text-stone-950">
-      <header className="border-b border-stone-800 bg-stone-950 text-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-5 px-5 py-5">
+    <main className="min-h-screen bg-[#f6f4ef] text-stone-950">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-stone-950 text-white shadow-xl shadow-black/10">
+        <div className="flex min-h-20 w-full items-center justify-between gap-5 px-5 sm:px-8 lg:px-10">
           <div>
             <p className="text-xs font-black tracking-[0.2em] text-amber-400">
               LA YEKA · ADMINISTRACIÓN
             </p>
-            <h1 className="text-xl font-black">Hola, {user}</h1>
+            <h1 className="mt-1 text-lg font-black sm:text-xl">Hola, {user}</h1>
           </div>
           <button
             onClick={logout}
@@ -199,8 +229,11 @@ function Admin() {
           </button>
         </div>
       </header>
-      <div className="mx-auto grid max-w-7xl gap-6 px-5 py-8 lg:grid-cols-[15rem_1fr]">
-        <aside className="rounded-2xl bg-white p-3 shadow-sm">
+      <div className="grid w-full gap-0 xl:grid-cols-[17rem_minmax(0,1fr)]">
+        <aside className="border-b border-stone-200 bg-white px-4 py-4 xl:min-h-[calc(100vh-5rem)] xl:border-b-0 xl:border-r xl:px-5 xl:py-7">
+          <div className="mb-5 hidden px-3 xl:block">
+            <p className="text-xs font-black tracking-[0.18em] text-stone-400">MÓDULOS</p>
+          </div>
           <nav className="grid gap-1">
             {(
               [
@@ -212,7 +245,7 @@ function Admin() {
               <button
                 key={id}
                 onClick={() => setView(id)}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold ${view === id ? 'bg-amber-400 text-stone-950' : 'hover:bg-stone-100'}`}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-amber-400 text-stone-950 shadow-sm' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-950'}`}
               >
                 <Icon size={18} />
                 {label}
@@ -220,17 +253,17 @@ function Admin() {
             ))}
           </nav>
         </aside>
-        <section>
+        <section className="min-w-0 px-5 py-7 sm:px-8 lg:px-10 xl:px-12">
           {error && (
             <p className="mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700">
               <TriangleAlert size={18} />
               {error}
             </p>
           )}
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-xs font-black tracking-[0.2em] text-amber-700">OPERACIÓN</p>
-              <h2 className="mt-1 text-3xl font-black">
+              <h2 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
                 {view === 'products'
                   ? 'Catálogo'
                   : view === 'orders'
@@ -240,55 +273,76 @@ function Admin() {
             </div>
             <button
               onClick={load}
-              className="rounded-lg bg-stone-950 px-4 py-2 text-sm font-bold text-white hover:bg-amber-500 hover:text-stone-950"
+              className="inline-flex items-center gap-2 rounded-xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-500 hover:text-stone-950 disabled:cursor-wait"
             >
-              {loading ? 'Actualizando…' : 'Actualizar'}
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              {loading ? 'Actualizando…' : 'Actualizar datos'}
             </button>
           </div>
           {view === 'products' && (
             <>
-              <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                <Stat value={products.length} label="Productos" />
-                <Stat value={available} label="Disponibles" />
-                <Stat value={products.length - available} label="Pausados" />
+              <div className="mb-6 grid gap-4 sm:grid-cols-3">
+                <Stat value={products.length} label="Productos registrados" />
+                <Stat value={available} label="A la venta" tone="green" />
+                <Stat value={products.length - available} label="Pausados" tone="gray" />
               </div>
-              <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                {products.map((product) => (
+              <div className="mb-5 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+                <label className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                  <input value={productQuery} onChange={(event) => setProductQuery(event.target.value)} className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-amber-400 focus:bg-white" placeholder="Buscar por producto o ingrediente" />
+                </label>
+                <label className="relative">
+                  <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+                  <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-amber-400">
+                    <option value="all">Todas las categorías</option>
+                    {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                  </select>
+                </label>
+                <select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value as 'all' | 'available' | 'paused')} className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-400">
+                  <option value="all">Todo el estado</option>
+                  <option value="available">Disponibles</option>
+                  <option value="paused">Pausados</option>
+                </select>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <div className="hidden grid-cols-[minmax(0,1fr)_11rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
+                  <span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span>
+                </div>
+                {filteredProducts.map((product) => (
                   <article
-                    className="grid gap-3 border-b border-stone-100 p-4 md:grid-cols-[1fr_auto_auto] md:items-center"
+                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[minmax(0,1fr)_11rem_10rem] md:items-center"
                     key={product.id}
                   >
                     <div>
                       <p className="font-black">{product.name}</p>
                       <p className="mt-1 text-sm text-stone-500">
-                        {product.category?.name} · {product.description || 'Sin descripción'}
+                        <span className="font-semibold text-amber-700">{product.category?.name || 'Sin categoría'}</span> · {product.description || 'Sin descripción'}
                       </p>
                     </div>
-                    <label className="text-sm font-bold">
-                      S/{' '}
+                    <div className="flex items-center gap-2">
+                      <CircleDollarSign size={17} className="text-stone-500" />
                       <input
-                        className="ml-1 w-20 rounded-lg border border-stone-300 px-2 py-1"
+                        className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm font-bold outline-none focus:border-amber-400"
                         type="number"
                         min="0.1"
                         step="0.1"
-                        defaultValue={Number(product.price)}
-                        onBlur={(event) => {
-                          const price = Number(event.currentTarget.value);
-                          if (price > 0 && price !== Number(product.price))
-                            update('products', product.id, { price });
-                        }}
+                        value={draftPrices[product.id] ?? product.price}
+                        onChange={(event) => setDraftPrices((current) => ({ ...current, [product.id]: event.target.value }))}
                       />
-                    </label>
+                      {Number(draftPrices[product.id] ?? product.price) !== Number(product.price) && <button onClick={() => update('products', product.id, { price: Number(draftPrices[product.id]) })} disabled={savingId === product.id} className="rounded-lg bg-amber-400 px-2.5 py-2 text-xs font-black text-stone-950 hover:bg-amber-500">Guardar</button>}
+                    </div>
                     <button
                       onClick={() =>
                         update('products', product.id, { isAvailable: !product.isAvailable })
                       }
-                      className={`rounded-lg px-3 py-2 text-sm font-bold ${product.isAvailable ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'}`}
+                      disabled={savingId === product.id}
+                      className={`rounded-xl px-3 py-2 text-sm font-bold transition ${product.isAvailable ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-stone-200 text-stone-600 hover:bg-stone-300'}`}
                     >
                       {product.isAvailable ? 'Disponible' : 'Pausado'}
                     </button>
                   </article>
                 ))}
+                {filteredProducts.length === 0 && <Empty text="No encontramos productos con esos filtros." />}
               </div>
             </>
           )}
@@ -359,11 +413,17 @@ function Admin() {
     </main>
   );
 }
-function Stat({ value, label }: { value: number; label: string }) {
+function Stat({ value, label, tone = 'amber' }: { value: number; label: string; tone?: 'amber' | 'green' | 'gray' }) {
+  const accents = {
+    amber: 'bg-amber-400',
+    green: 'bg-emerald-400',
+    gray: 'bg-stone-300',
+  };
   return (
-    <article className="rounded-2xl bg-white p-5 shadow-sm">
+    <article className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+      <span className={`absolute inset-x-0 top-0 h-1 ${accents[tone]}`} />
       <strong className="block text-4xl font-black">{value}</strong>
-      <span className="text-sm text-stone-500">{label}</span>
+      <span className="mt-1 block text-sm text-stone-500">{label}</span>
     </article>
   );
 }
