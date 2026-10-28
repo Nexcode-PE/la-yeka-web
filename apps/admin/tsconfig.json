@@ -1,0 +1,1 @@
+{"compilerOptions":{"target":"ES2020","lib":["DOM","ESNext"],"strict":true,"module":"ESNext","moduleResolution":"Bundler","jsx":"react-jsx","noEmit":true,"types":["vite/client"]},"include":["src"]}

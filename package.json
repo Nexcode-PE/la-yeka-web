@@ -1,9 +1,16 @@
 {
-  "name": "la-yeka-web",
+  "name": "la-yeka-platform",
   "private": true,
-  "version": "1.0.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "tsc -b && vite build", "lint": "eslint ." },
-  "dependencies": { "@vitejs/plugin-react": "latest", "lucide-react": "latest", "react": "latest", "react-dom": "latest" },
-  "devDependencies": { "@types/node": "latest", "@types/react": "latest", "@types/react-dom": "latest", "typescript": "latest", "vite": "latest" }
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "dev:cliente": "pnpm --filter @la-yeka/client dev",
+    "dev:admin": "pnpm --filter @la-yeka/admin dev",
+    "dev:api": "pnpm --filter @la-yeka/api dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @la-yeka/database generate",
+    "db:migrate": "pnpm --filter @la-yeka/database migrate",
+    "db:migrate:deploy": "pnpm --filter @la-yeka/database exec prisma migrate deploy",
+    "db:seed": "pnpm --filter @la-yeka/database seed"
+  }
 }
