@@ -1,0 +1,504 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "La Yeka" [ref=e4] [cursor=pointer]:
+      - /url: "#inicio"
+      - img "La Yeka - ¡Con todititas las cremas! - Chincha Perú" [ref=e5]
+    - navigation [ref=e6]:
+      - link "Carta" [ref=e7] [cursor=pointer]:
+        - /url: "#carta"
+      - link "Complementos" [ref=e8] [cursor=pointer]:
+        - /url: "#extras"
+      - link "Nosotros" [ref=e9] [cursor=pointer]:
+        - /url: "#nosotros"
+    - generic [ref=e10]:
+      - button "Inicia sesión" [ref=e11] [cursor=pointer]
+      - button "0 Mi pedido" [ref=e12] [cursor=pointer]:
+        - generic [ref=e16]: "0"
+        - text: Mi pedido
+  - main [ref=e17]:
+    - generic [ref=e19]:
+      - paragraph [ref=e20]: SABOR SIN DISCUSSIONES
+      - heading [level=1] [ref=e23]:
+        - text: Esto no es una hamburguesa.
+        - emphasis [ref=e24]: Es La Yeka.
+      - paragraph [ref=e25]: La carta más achorada de Chincha Alta, recién hecha para dejarte con ganas de volver.
+      - link "Ver la carta" [ref=e26] [cursor=pointer]:
+        - /url: "#carta"
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - strong [ref=e31]: "+30"
+          - text: opciones yeka
+        - generic [ref=e32]:
+          - strong [ref=e33]: 100%
+          - text: sabor
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - generic [ref=e37]: Pedidos rápidos por WhatsApp
+        - paragraph [ref=e38]: Confirma tu zona y recibe tu pedido en Chincha Alta.
+      - button "Armar mi pedido" [ref=e39] [cursor=pointer]
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - paragraph [ref=e45]: LOS FAVORITOS DE LA CASA
+          - heading "Las más pedidas" [level=2] [ref=e46]
+        - button "Ver toda la carta" [ref=e47] [cursor=pointer]
+      - generic [ref=e50]:
+        - article [ref=e51]:
+          - img "Fileteada Hawaiana, presentación referencial" [ref=e52]
+          - generic [ref=e53]:
+            - heading "Fileteada Hawaiana" [level=3] [ref=e54]
+            - paragraph [ref=e55]: Pollo, piña, queso, jamón, verduras y papas
+            - generic [ref=e56]:
+              - strong [ref=e57]: S/ 22.00
+              - button "Agregar" [ref=e58] [cursor=pointer]
+        - article [ref=e60]:
+          - img "La Mixta Full, presentación referencial" [ref=e61]
+          - generic [ref=e62]:
+            - heading "La Mixta Full" [level=3] [ref=e63]
+            - paragraph [ref=e64]: Carne, chorizo, huevo, queso, jamón, tocino y papas
+            - generic [ref=e65]:
+              - strong [ref=e66]: S/ 25.00
+              - button "Agregar" [ref=e67] [cursor=pointer]
+        - article [ref=e69]:
+          - img "La Yekaburger Full, presentación referencial" [ref=e70]
+          - generic [ref=e71]:
+            - heading "La Yekaburger Full" [level=3] [ref=e72]
+            - paragraph [ref=e73]: Carne, pollo, chorizo, huevo, queso, plátano, jamón y tocino
+            - generic [ref=e74]:
+              - strong [ref=e75]: S/ 29.00
+              - button "Agregar" [ref=e76] [cursor=pointer]
+        - article [ref=e78]:
+          - img "Salchiyeka Full, presentación referencial" [ref=e79]
+          - generic [ref=e80]:
+            - heading "Salchiyeka Full" [level=3] [ref=e81]
+            - paragraph [ref=e82]: Papas, hot dog, pollo, chorizo, plátano, huevo, jamón, tocino, queso y Pepsi Jumbo
+            - generic [ref=e83]:
+              - strong [ref=e84]: S/ 37.00
+              - button "Agregar" [ref=e85] [cursor=pointer]
+    - generic [ref=e87]:
+      - paragraph [ref=e88]: DIRECTO DESDE CHINCHA ALTA
+      - heading "Sin poses. Con bastante queso." [level=2] [ref=e89]
+      - paragraph [ref=e90]: "Preparamos cada pedido con ganas: panes doraditos, carne al punto y esa combinación de ingredientes que se siente como premio."
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - paragraph [ref=e94]: ELIGE TU ANTOJO
+          - heading "La carta yeka" [level=2] [ref=e95]
+        - paragraph [ref=e96]: Todos nuestros sánguches llevan verduritas frescas y papas fritas o al hilo.
+      - generic [ref=e97]:
+        - button "Todo" [ref=e98] [cursor=pointer]
+        - button "Chorizos" [ref=e99] [cursor=pointer]
+        - button "Clásicas" [ref=e100] [cursor=pointer]
+        - button "Fileteadas" [ref=e101] [cursor=pointer]
+        - button "Deshilachadas" [ref=e102] [cursor=pointer]
+        - button "Mixtas" [ref=e103] [cursor=pointer]
+        - button "Especiales" [ref=e104] [cursor=pointer]
+        - button "Salchipapas" [ref=e105] [cursor=pointer]
+        - button "Bebidas" [ref=e106] [cursor=pointer]
+      - generic [ref=e107]:
+        - article [ref=e108]:
+          - img "La Achorada, presentación referencial" [ref=e110]
+          - generic [ref=e111]:
+            - generic [ref=e112]:
+              - heading "La Achorada" [level=3] [ref=e113]
+              - paragraph [ref=e114]: Chorizo, lechuga, pepino, tomate y papas
+            - generic [ref=e115]:
+              - strong [ref=e116]: S/ 12.00
+              - button "Agregar La Achorada" [ref=e117] [cursor=pointer]
+        - article [ref=e119]:
+          - img "La Chori Doble, presentación referencial" [ref=e121]
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - heading "La Chori Doble" [level=3] [ref=e124]
+              - paragraph [ref=e125]: Doble chorizo, verduras y papas
+            - generic [ref=e126]:
+              - strong [ref=e127]: S/ 18.00
+              - button "Agregar La Chori Doble" [ref=e128] [cursor=pointer]
+        - article [ref=e130]:
+          - img "La Chori Royal, presentación referencial" [ref=e132]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - heading "La Chori Royal" [level=3] [ref=e135]
+              - paragraph [ref=e136]: Full chorizo, huevo, queso, verduras y papas
+            - generic [ref=e137]:
+              - strong [ref=e138]: S/ 18.00
+              - button "Agregar La Chori Royal" [ref=e139] [cursor=pointer]
+        - article [ref=e141]:
+          - img "La Chori Pobre, presentación referencial" [ref=e143]
+          - generic [ref=e144]:
+            - generic [ref=e145]:
+              - heading "La Chori Pobre" [level=3] [ref=e146]
+              - paragraph [ref=e147]: Full chorizo, plátano, huevo, verduras y papas
+            - generic [ref=e148]:
+              - strong [ref=e149]: S/ 18.00
+              - button "Agregar La Chori Pobre" [ref=e150] [cursor=pointer]
+        - article [ref=e152]:
+          - img "La Clásica, presentación referencial" [ref=e154]
+          - generic [ref=e155]:
+            - generic [ref=e156]:
+              - heading "La Clásica" [level=3] [ref=e157]
+              - paragraph [ref=e158]: Carne, lechuga, pepino, tomate y papas
+            - generic [ref=e159]:
+              - strong [ref=e160]: S/ 14.00
+              - button "Agregar La Clásica" [ref=e161] [cursor=pointer]
+        - article [ref=e163]:
+          - img "El Doble Queso, presentación referencial" [ref=e165]
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - heading "El Doble Queso" [level=3] [ref=e168]
+              - paragraph [ref=e169]: Carne, queso, verduras y papas
+            - generic [ref=e170]:
+              - strong [ref=e171]: S/ 18.00
+              - button "Agregar El Doble Queso" [ref=e172] [cursor=pointer]
+        - article [ref=e174]:
+          - img "La Royal, presentación referencial" [ref=e176]
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - heading "La Royal" [level=3] [ref=e179]
+              - paragraph [ref=e180]: Carne, doble queso, verduras y papas
+            - generic [ref=e181]:
+              - strong [ref=e182]: S/ 18.00
+              - button "Agregar La Royal" [ref=e183] [cursor=pointer]
+        - article [ref=e185]:
+          - img "El Triple Queso, presentación referencial" [ref=e187]
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - heading "El Triple Queso" [level=3] [ref=e190]
+              - paragraph [ref=e191]: Carne, triple queso, verduras y papas
+            - generic [ref=e192]:
+              - strong [ref=e193]: S/ 20.00
+              - button "Agregar El Triple Queso" [ref=e194] [cursor=pointer]
+        - article [ref=e196]:
+          - img "La Fileteada, presentación referencial" [ref=e198]
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - heading "La Fileteada" [level=3] [ref=e201]
+              - paragraph [ref=e202]: Pechuga de pollo, verduras y papas
+            - generic [ref=e203]:
+              - strong [ref=e204]: S/ 16.00
+              - button "Agregar La Fileteada" [ref=e205] [cursor=pointer]
+        - article [ref=e207]:
+          - img "Fileteada Royal, presentación referencial" [ref=e209]
+          - generic [ref=e210]:
+            - generic [ref=e211]:
+              - heading "Fileteada Royal" [level=3] [ref=e212]
+              - paragraph [ref=e213]: Pollo, huevo, queso, verduras y papas
+            - generic [ref=e214]:
+              - strong [ref=e215]: S/ 20.00
+              - button "Agregar Fileteada Royal" [ref=e216] [cursor=pointer]
+        - article [ref=e218]:
+          - img "Fileteada 2 Quesos, presentación referencial" [ref=e220]
+          - generic [ref=e221]:
+            - generic [ref=e222]:
+              - heading "Fileteada 2 Quesos" [level=3] [ref=e223]
+              - paragraph [ref=e224]: Pollo, doble queso, verduras y papas
+            - generic [ref=e225]:
+              - strong [ref=e226]: S/ 20.00
+              - button "Agregar Fileteada 2 Quesos" [ref=e227] [cursor=pointer]
+        - article [ref=e229]:
+          - img "Fileteada a lo Pobre, presentación referencial" [ref=e231]
+          - generic [ref=e232]:
+            - generic [ref=e233]:
+              - heading "Fileteada a lo Pobre" [level=3] [ref=e234]
+              - paragraph [ref=e235]: Pollo, plátano, huevo, verduras y papas
+            - generic [ref=e236]:
+              - strong [ref=e237]: S/ 20.00
+              - button "Agregar Fileteada a lo Pobre" [ref=e238] [cursor=pointer]
+        - article [ref=e240]:
+          - img "Fileteada 3 Quesos, presentación referencial" [ref=e242]
+          - generic [ref=e243]:
+            - generic [ref=e244]:
+              - heading "Fileteada 3 Quesos" [level=3] [ref=e245]
+              - paragraph [ref=e246]: Pollo, triple queso, verduras y papas
+            - generic [ref=e247]:
+              - strong [ref=e248]: S/ 21.00
+              - button "Agregar Fileteada 3 Quesos" [ref=e249] [cursor=pointer]
+        - article [ref=e251]:
+          - img "Fileteada Hawaiana, presentación referencial" [ref=e253]
+          - generic [ref=e254]:
+            - generic [ref=e255]:
+              - heading "Fileteada Hawaiana" [level=3] [ref=e256]
+              - paragraph [ref=e257]: Pollo, piña, queso, jamón, verduras y papas
+            - generic [ref=e258]:
+              - strong [ref=e259]: S/ 22.00
+              - button "Agregar Fileteada Hawaiana" [ref=e260] [cursor=pointer]
+        - article [ref=e262]:
+          - img "La Deshilachada, presentación referencial" [ref=e264]
+          - generic [ref=e265]:
+            - generic [ref=e266]:
+              - heading "La Deshilachada" [level=3] [ref=e267]
+              - paragraph [ref=e268]: Pollo deshilachado, verduras y papas
+            - generic [ref=e269]:
+              - strong [ref=e270]: S/ 16.00
+              - button "Agregar La Deshilachada" [ref=e271] [cursor=pointer]
+        - article [ref=e273]:
+          - img "Deshilachada Royal, presentación referencial" [ref=e275]
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - heading "Deshilachada Royal" [level=3] [ref=e278]
+              - paragraph [ref=e279]: Pollo deshilachado, huevo, queso, verduras y papas
+            - generic [ref=e280]:
+              - strong [ref=e281]: S/ 20.00
+              - button "Agregar Deshilachada Royal" [ref=e282] [cursor=pointer]
+        - article [ref=e284]:
+          - img "Deshilachada 2 Quesos, presentación referencial" [ref=e286]
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - heading "Deshilachada 2 Quesos" [level=3] [ref=e289]
+              - paragraph [ref=e290]: Pollo deshilachado, doble queso, verduras y papas
+            - generic [ref=e291]:
+              - strong [ref=e292]: S/ 20.00
+              - button "Agregar Deshilachada 2 Quesos" [ref=e293] [cursor=pointer]
+        - article [ref=e295]:
+          - img "Deshilachada a lo Pobre, presentación referencial" [ref=e297]
+          - generic [ref=e298]:
+            - generic [ref=e299]:
+              - heading "Deshilachada a lo Pobre" [level=3] [ref=e300]
+              - paragraph [ref=e301]: Pollo deshilachado, plátano, huevo, verduras y papas
+            - generic [ref=e302]:
+              - strong [ref=e303]: S/ 20.00
+              - button "Agregar Deshilachada a lo Pobre" [ref=e304] [cursor=pointer]
+        - article [ref=e306]:
+          - img "Deshilachada 3 Quesos, presentación referencial" [ref=e308]
+          - generic [ref=e309]:
+            - generic [ref=e310]:
+              - heading "Deshilachada 3 Quesos" [level=3] [ref=e311]
+              - paragraph [ref=e312]: Pollo deshilachado, triple queso, verduras y papas
+            - generic [ref=e313]:
+              - strong [ref=e314]: S/ 21.00
+              - button "Agregar Deshilachada 3 Quesos" [ref=e315] [cursor=pointer]
+        - article [ref=e317]:
+          - img "Deshilachada Hawaiana, presentación referencial" [ref=e319]
+          - generic [ref=e320]:
+            - generic [ref=e321]:
+              - heading "Deshilachada Hawaiana" [level=3] [ref=e322]
+              - paragraph [ref=e323]: Pollo deshilachado, piña, queso, jamón, verduras y papas
+            - generic [ref=e324]:
+              - strong [ref=e325]: S/ 22.00
+              - button "Agregar Deshilachada Hawaiana" [ref=e326] [cursor=pointer]
+        - article [ref=e328]:
+          - img "La Choricarne, presentación referencial" [ref=e330]
+          - generic [ref=e331]:
+            - generic [ref=e332]:
+              - heading "La Choricarne" [level=3] [ref=e333]
+              - paragraph [ref=e334]: Carne, chorizo, verduras y papas
+            - generic [ref=e335]:
+              - strong [ref=e336]: S/ 18.00
+              - button "Agregar La Choricarne" [ref=e337] [cursor=pointer]
+        - article [ref=e339]:
+          - img "La Pobre, presentación referencial" [ref=e341]
+          - generic [ref=e342]:
+            - generic [ref=e343]:
+              - heading "La Pobre" [level=3] [ref=e344]
+              - paragraph [ref=e345]: Carne, plátano, huevo, verduras y papas
+            - generic [ref=e346]:
+              - strong [ref=e347]: S/ 20.00
+              - button "Agregar La Pobre" [ref=e348] [cursor=pointer]
+        - article [ref=e350]:
+          - img "La Filecarne, presentación referencial" [ref=e352]
+          - generic [ref=e353]:
+            - generic [ref=e354]:
+              - heading "La Filecarne" [level=3] [ref=e355]
+              - paragraph [ref=e356]: Carne, pechuga de pollo, verduras y papas
+            - generic [ref=e357]:
+              - strong [ref=e358]: S/ 20.00
+              - button "Agregar La Filecarne" [ref=e359] [cursor=pointer]
+        - article [ref=e361]:
+          - img "La Chorifilete, presentación referencial" [ref=e363]
+          - generic [ref=e364]:
+            - generic [ref=e365]:
+              - heading "La Chorifilete" [level=3] [ref=e366]
+              - paragraph [ref=e367]: Pollo, chorizo, verduras y papas
+            - generic [ref=e368]:
+              - strong [ref=e369]: S/ 20.00
+              - button "Agregar La Chorifilete" [ref=e370] [cursor=pointer]
+        - article [ref=e372]:
+          - generic [ref=e373]: Favorita
+          - img "La Mixta Full, presentación referencial" [ref=e375]
+          - generic [ref=e376]:
+            - generic [ref=e377]:
+              - heading "La Mixta Full" [level=3] [ref=e378]
+              - paragraph [ref=e379]: Carne, chorizo, huevo, queso, jamón, tocino y papas
+            - generic [ref=e380]:
+              - strong [ref=e381]: S/ 25.00
+              - button "Agregar La Mixta Full" [ref=e382] [cursor=pointer]
+        - article [ref=e384]:
+          - img "La Hawaiana, presentación referencial" [ref=e386]
+          - generic [ref=e387]:
+            - generic [ref=e388]:
+              - heading "La Hawaiana" [level=3] [ref=e389]
+              - paragraph [ref=e390]: Carne, piña, queso, jamón, verduras y papas
+            - generic [ref=e391]:
+              - strong [ref=e392]: S/ 20.00
+              - button "Agregar La Hawaiana" [ref=e393] [cursor=pointer]
+        - article [ref=e395]:
+          - img "La Rompefilo, presentación referencial" [ref=e397]
+          - generic [ref=e398]:
+            - generic [ref=e399]:
+              - heading "La Rompefilo" [level=3] [ref=e400]
+              - paragraph [ref=e401]: ½ kilo de full carne, huevo, queso, verduras y papas
+            - generic [ref=e402]:
+              - strong [ref=e403]: S/ 21.00
+              - button "Agregar La Rompefilo" [ref=e404] [cursor=pointer]
+        - article [ref=e406]:
+          - img "La Yekaburger, presentación referencial" [ref=e408]
+          - generic [ref=e409]:
+            - generic [ref=e410]:
+              - heading "La Yekaburger" [level=3] [ref=e411]
+              - paragraph [ref=e412]: Carne, pollo, chorizo, verduras y papas
+            - generic [ref=e413]:
+              - strong [ref=e414]: S/ 25.00
+              - button "Agregar La Yekaburger" [ref=e415] [cursor=pointer]
+        - article [ref=e417]:
+          - generic [ref=e418]: La más yeka
+          - img "La Yekaburger Full, presentación referencial" [ref=e420]
+          - generic [ref=e421]:
+            - generic [ref=e422]:
+              - heading "La Yekaburger Full" [level=3] [ref=e423]
+              - paragraph [ref=e424]: Carne, pollo, chorizo, huevo, queso, plátano, jamón y tocino
+            - generic [ref=e425]:
+              - strong [ref=e426]: S/ 29.00
+              - button "Agregar La Yekaburger Full" [ref=e427] [cursor=pointer]
+        - article [ref=e429]:
+          - img "Salchipapas, presentación referencial" [ref=e431]
+          - generic [ref=e432]:
+            - generic [ref=e433]:
+              - heading "Salchipapas" [level=3] [ref=e434]
+              - paragraph [ref=e435]: Papas, hot dog ahumado y Pepsi Jumbo
+            - generic [ref=e436]:
+              - strong [ref=e437]: S/ 22.00
+              - button "Agregar Salchipapas" [ref=e438] [cursor=pointer]
+        - article [ref=e440]:
+          - img "Salchiroyal, presentación referencial" [ref=e442]
+          - generic [ref=e443]:
+            - generic [ref=e444]:
+              - heading "Salchiroyal" [level=3] [ref=e445]
+              - paragraph [ref=e446]: Papas, hot dog, huevo frito y Pepsi Jumbo
+            - generic [ref=e447]:
+              - strong [ref=e448]: S/ 24.00
+              - button "Agregar Salchiroyal" [ref=e449] [cursor=pointer]
+        - article [ref=e451]:
+          - img "Salchichorizo, presentación referencial" [ref=e453]
+          - generic [ref=e454]:
+            - generic [ref=e455]:
+              - heading "Salchichorizo" [level=3] [ref=e456]
+              - paragraph [ref=e457]: Papas, hot dog, chorizo, huevo y Pepsi Jumbo
+            - generic [ref=e458]:
+              - strong [ref=e459]: S/ 27.00
+              - button "Agregar Salchichorizo" [ref=e460] [cursor=pointer]
+        - article [ref=e462]:
+          - img "Salchipobre, presentación referencial" [ref=e464]
+          - generic [ref=e465]:
+            - generic [ref=e466]:
+              - heading "Salchipobre" [level=3] [ref=e467]
+              - paragraph [ref=e468]: Papas, hot dog, plátano, huevo y Pepsi Jumbo
+            - generic [ref=e469]:
+              - strong [ref=e470]: S/ 29.00
+              - button "Agregar Salchipobre" [ref=e471] [cursor=pointer]
+        - article [ref=e473]:
+          - img "Salchifilete, presentación referencial" [ref=e475]
+          - generic [ref=e476]:
+            - generic [ref=e477]:
+              - heading "Salchifilete" [level=3] [ref=e478]
+              - paragraph [ref=e479]: Papas, hot dog, pollo, huevo y Pepsi Jumbo
+            - generic [ref=e480]:
+              - strong [ref=e481]: S/ 29.00
+              - button "Agregar Salchifilete" [ref=e482] [cursor=pointer]
+        - article [ref=e484]:
+          - img "Salchiyeka, presentación referencial" [ref=e486]
+          - generic [ref=e487]:
+            - generic [ref=e488]:
+              - heading "Salchiyeka" [level=3] [ref=e489]
+              - paragraph [ref=e490]: Papas, hot dog, pollo, chorizo, huevo y Pepsi Jumbo
+            - generic [ref=e491]:
+              - strong [ref=e492]: S/ 31.00
+              - button "Agregar Salchiyeka" [ref=e493] [cursor=pointer]
+        - article [ref=e495]:
+          - img "Salchiyeka Full, presentación referencial" [ref=e497]
+          - generic [ref=e498]:
+            - generic [ref=e499]:
+              - heading "Salchiyeka Full" [level=3] [ref=e500]
+              - paragraph [ref=e501]: Papas, hot dog, pollo, chorizo, plátano, huevo, jamón, tocino, queso y Pepsi Jumbo
+            - generic [ref=e502]:
+              - strong [ref=e503]: S/ 37.00
+              - button "Agregar Salchiyeka Full" [ref=e504] [cursor=pointer]
+        - article [ref=e506]:
+          - img "Coca-Cola 500 ml, presentación referencial" [ref=e508]
+          - generic [ref=e509]:
+            - generic [ref=e510]:
+              - heading "Coca-Cola 500 ml" [level=3] [ref=e511]
+              - paragraph [ref=e512]: Bebida helada individual
+            - generic [ref=e513]:
+              - strong [ref=e514]: S/ 4.00
+              - button "Agregar Coca-Cola 500 ml" [ref=e515] [cursor=pointer]
+        - article [ref=e517]:
+          - img "Inca Kola 500 ml, presentación referencial" [ref=e519]
+          - generic [ref=e520]:
+            - generic [ref=e521]:
+              - heading "Inca Kola 500 ml" [level=3] [ref=e522]
+              - paragraph [ref=e523]: Bebida helada individual
+            - generic [ref=e524]:
+              - strong [ref=e525]: S/ 4.00
+              - button "Agregar Inca Kola 500 ml" [ref=e526] [cursor=pointer]
+    - generic [ref=e528]:
+      - generic [ref=e529]:
+        - paragraph [ref=e530]: HAZLO MÁS YEKA
+        - heading "Complementos" [level=2] [ref=e531]
+        - paragraph [ref=e532]: Agrégale lo que quieras. Porque más queso nunca fue mala idea.
+      - generic [ref=e533]:
+        - button "Jamón + S/ 2.00" [ref=e534] [cursor=pointer]:
+          - generic [ref=e535]: Jamón
+          - generic [ref=e536]: + S/ 2.00
+        - button "Queso + S/ 3.00" [ref=e538] [cursor=pointer]:
+          - generic [ref=e539]: Queso
+          - generic [ref=e540]: + S/ 3.00
+        - button "Huevo + S/ 3.00" [ref=e542] [cursor=pointer]:
+          - generic [ref=e543]: Huevo
+          - generic [ref=e544]: + S/ 3.00
+        - button "Tocino + S/ 3.00" [ref=e546] [cursor=pointer]:
+          - generic [ref=e547]: Tocino
+          - generic [ref=e548]: + S/ 3.00
+        - button "Plátano + S/ 3.00" [ref=e550] [cursor=pointer]:
+          - generic [ref=e551]: Plátano
+          - generic [ref=e552]: + S/ 3.00
+        - button "Piña + S/ 3.00" [ref=e554] [cursor=pointer]:
+          - generic [ref=e555]: Piña
+          - generic [ref=e556]: + S/ 3.00
+    - generic [ref=e558]:
+      - generic [ref=e559]:
+        - paragraph [ref=e560]: VISÍTANOS
+        - heading "Chincha Alta, Perú" [level=2] [ref=e561]: Chincha Alta,Perú
+        - link [ref=e562] [cursor=pointer]:
+          - /url: https://www.google.com/maps/search/?api=1&query=-13.41781595,-76.1336172
+          - generic [ref=e566]: Calle Mariscal Benavides 150Abrir ruta en Google Maps
+        - generic [ref=e567]:
+          - paragraph [ref=e568]: ZONA DE DESPACHO
+          - heading "Chincha Alta" [level=3] [ref=e569]
+          - paragraph [ref=e570]: Confirma cobertura y tiempo de entrega escribiéndonos por WhatsApp.
+      - link "Abrir ubicación de La Yeka en Google Maps" [ref=e571] [cursor=pointer]:
+        - /url: https://www.google.com/maps/search/?api=1&query=-13.41781595,-76.1336172
+        - iframe [ref=e572]
+    - generic [ref=e573]:
+      - generic [ref=e574]:
+        - link "La Yeka" [ref=e575] [cursor=pointer]:
+          - /url: "#inicio"
+          - img "La Yeka - Chincha Perú" [ref=e576]
+        - paragraph [ref=e577]: Hecho con hambre en Chincha Alta.
+      - generic [ref=e578]:
+        - heading "Mis cuentas" [level=3] [ref=e579]
+        - link "Pedir" [ref=e580] [cursor=pointer]:
+          - /url: "#carta"
+      - generic [ref=e581]:
+        - heading "Información" [level=3] [ref=e582]
+        - button "Términos y condiciones" [ref=e583] [cursor=pointer]
+        - button "Política de privacidad" [ref=e584] [cursor=pointer]
+        - button "Libro de reclamaciones" [ref=e585] [cursor=pointer]
+      - generic [ref=e586]:
+        - heading "Síguenos" [level=3] [ref=e587]
+        - generic [ref=e588]:
+          - link "Instagram" [ref=e589] [cursor=pointer]:
+            - /url: https://www.instagram.com/layekahamburgueseria/
+          - link "Facebook" [ref=e594] [cursor=pointer]:
+            - /url: https://www.facebook.com/LaYekaFastFood?locale=es_LA
+  - status
+  - button "Volver al inicio" [ref=e597] [cursor=pointer]
