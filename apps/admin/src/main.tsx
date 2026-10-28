@@ -41,7 +41,7 @@ type Claim = {
   createdAt: string;
 };
 type View = 'products' | 'orders' | 'claims';
-const api = import.meta.env.VITE_API_URL || '';
+const api = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 const labels: Record<string, string> = {
   PENDING: 'Pendiente',
   CONFIRMED: 'Confirmado',
