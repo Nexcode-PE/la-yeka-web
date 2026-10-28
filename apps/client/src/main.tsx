@@ -7,86 +7,6 @@ type Product = { id?: string; name: string; detail: string; price: number; categ
 type CartItem = Product & { qty: number };
 type OrderHistory = { id: string; total: string; status: string; createdAt: string; items: Array<{ productName: string; quantity: number }> };
 
-const products: Product[] = [
-  ['La Achorada', 'Chorizo, lechuga, pepino, tomate y papas', 12, 'Chorizos'],
-  ['La Chori Doble', 'Doble chorizo, verduras y papas', 18, 'Chorizos'],
-  ['La Chori Royal', 'Full chorizo, huevo, queso, verduras y papas', 18, 'Chorizos'],
-  ['La Chori Pobre', 'Full chorizo, plátano, huevo, verduras y papas', 18, 'Chorizos'],
-  ['La Clásica', 'Carne, lechuga, pepino, tomate y papas', 14, 'Clásicas'],
-  ['El Doble Queso', 'Carne, queso, verduras y papas', 18, 'Clásicas'],
-  ['La Royal', 'Carne, doble queso, verduras y papas', 18, 'Clásicas'],
-  ['El Triple Queso', 'Carne, triple queso, verduras y papas', 20, 'Clásicas'],
-  ['La Fileteada', 'Pechuga de pollo, verduras y papas', 16, 'Fileteadas'],
-  ['Fileteada Royal', 'Pollo, huevo, queso, verduras y papas', 20, 'Fileteadas'],
-  ['Fileteada 2 Quesos', 'Pollo, doble queso, verduras y papas', 20, 'Fileteadas'],
-  ['Fileteada a lo Pobre', 'Pollo, plátano, huevo, verduras y papas', 20, 'Fileteadas'],
-  ['Fileteada 3 Quesos', 'Pollo, triple queso, verduras y papas', 21, 'Fileteadas'],
-  ['Fileteada Hawaiana', 'Pollo, piña, queso, jamón, verduras y papas', 22, 'Fileteadas'],
-  ['La Deshilachada', 'Pollo deshilachado, verduras y papas', 16, 'Deshilachadas'],
-  ['Deshilachada Royal', 'Pollo deshilachado, huevo, queso, verduras y papas', 20, 'Deshilachadas'],
-  [
-    'Deshilachada 2 Quesos',
-    'Pollo deshilachado, doble queso, verduras y papas',
-    20,
-    'Deshilachadas',
-  ],
-  [
-    'Deshilachada a lo Pobre',
-    'Pollo deshilachado, plátano, huevo, verduras y papas',
-    20,
-    'Deshilachadas',
-  ],
-  [
-    'Deshilachada 3 Quesos',
-    'Pollo deshilachado, triple queso, verduras y papas',
-    21,
-    'Deshilachadas',
-  ],
-  [
-    'Deshilachada Hawaiana',
-    'Pollo deshilachado, piña, queso, jamón, verduras y papas',
-    22,
-    'Deshilachadas',
-  ],
-  ['La Choricarne', 'Carne, chorizo, verduras y papas', 18, 'Mixtas'],
-  ['La Pobre', 'Carne, plátano, huevo, verduras y papas', 20, 'Mixtas'],
-  ['La Filecarne', 'Carne, pechuga de pollo, verduras y papas', 20, 'Mixtas'],
-  ['La Chorifilete', 'Pollo, chorizo, verduras y papas', 20, 'Mixtas'],
-  [
-    'La Mixta Full',
-    'Carne, chorizo, huevo, queso, jamón, tocino y papas',
-    25,
-    'Mixtas',
-    'Favorita',
-  ],
-  ['La Hawaiana', 'Carne, piña, queso, jamón, verduras y papas', 20, 'Especiales'],
-  ['La Rompefilo', '½ kilo de full carne, huevo, queso, verduras y papas', 21, 'Especiales'],
-  ['La Yekaburger', 'Carne, pollo, chorizo, verduras y papas', 25, 'Especiales'],
-  [
-    'La Yekaburger Full',
-    'Carne, pollo, chorizo, huevo, queso, plátano, jamón y tocino',
-    29,
-    'Especiales',
-    'La más yeka',
-  ],
-  ['Salchipapas', 'Papas, hot dog ahumado y Pepsi Jumbo', 22, 'Salchipapas'],
-  ['Salchiroyal', 'Papas, hot dog, huevo frito y Pepsi Jumbo', 24, 'Salchipapas'],
-  ['Salchichorizo', 'Papas, hot dog, chorizo, huevo y Pepsi Jumbo', 27, 'Salchipapas'],
-  ['Salchipobre', 'Papas, hot dog, plátano, huevo y Pepsi Jumbo', 29, 'Salchipapas'],
-  ['Salchifilete', 'Papas, hot dog, pollo, huevo y Pepsi Jumbo', 29, 'Salchipapas'],
-  ['Salchiyeka', 'Papas, hot dog, pollo, chorizo, huevo y Pepsi Jumbo', 31, 'Salchipapas'],
-  [
-    'Salchiyeka Full',
-    'Papas, hot dog, pollo, chorizo, plátano, huevo, jamón, tocino, queso y Pepsi Jumbo',
-    37,
-    'Salchipapas',
-  ],
-  ['Coca-Cola 500 ml', 'Bebida helada individual', 4, 'Bebidas'],
-  ['Inca Kola 500 ml', 'Bebida helada individual', 4, 'Bebidas'],
-].map(
-  ([name, detail, price, category, tag]) => ({ name, detail, price, category, tag }) as Product,
-);
-
 const extras = [
   { name: 'Jamón', price: 2 },
   { name: 'Queso', price: 3 },
@@ -95,7 +15,6 @@ const extras = [
   { name: 'Plátano', price: 3 },
   { name: 'Piña', price: 3 },
 ];
-const fallbackCategories = ['Todo', ...Array.from(new Set(products.map((p) => p.category)))];
 const featuredNames = ['La Yekaburger Full', 'La Mixta Full', 'Fileteada Hawaiana', 'Salchiyeka Full'];
 const money = (n: number) => `S/ ${n.toFixed(2)}`;
 const wa = import.meta.env.VITE_WHATSAPP_NUMBER || '51974121550';
@@ -109,7 +28,8 @@ const productVisual = (product: Product) => {
 };
 
 function App() {
-  const [catalog, setCatalog] = useState<Product[]>(products);
+  const [catalog, setCatalog] = useState<Product[]>([]);
+  const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [active, setActive] = useState('Todo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -127,7 +47,17 @@ function App() {
   const [cartNotice, setCartNotice] = useState('');
   const cartNoticeTimeout = useRef<number | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
-  useEffect(() => { const base = apiBase; if (base === null) return; fetch(base + '/api/catalog').then((r) => r.ok ? r.json() : []).then((categories) => { const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, tag: product.isFeatured ? 'Favorita' : undefined }))); if (next.length) setCatalog(next) }).catch(() => undefined) }, [])
+  useEffect(() => {
+    const base = apiBase;
+    if (base === null) { setCatalogState('error'); return; }
+    fetch(base + '/api/catalog')
+      .then((response) => { if (!response.ok) throw new Error(); return response.json(); })
+      .then((categories) => {
+        const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, tag: product.isFeatured ? 'Favorita' : undefined })));
+        setCatalog(next); setCatalogState('ready');
+      })
+      .catch(() => setCatalogState('error'));
+  }, [])
   useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
   useEffect(() => {
     const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 400);
@@ -136,7 +66,7 @@ function App() {
     return () => window.removeEventListener('scroll', updateBackToTopVisibility);
   }, []);
   const shown = useMemo(() => active === 'Todo' ? catalog : catalog.filter((p) => p.category === active), [active, catalog]);
-  const categories = useMemo(() => catalog.length ? ['Todo', ...Array.from(new Set(catalog.map((product) => product.category)))] : fallbackCategories, [catalog]);
+  const categories = useMemo(() => ['Todo', ...Array.from(new Set(catalog.map((product) => product.category)))], [catalog]);
   const topPicks = useMemo(() => catalog.filter((product) => featuredNames.includes(product.name)), [catalog]);
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
@@ -262,7 +192,7 @@ function App() {
             Armar mi pedido <ChevronRight size={17} />
           </button>
         </section>
-        <section className="featured">
+        {topPicks.length > 0 && <section className="featured">
           <div className="section-head">
             <div>
               <p className="eyebrow">LOS FAVORITOS DE LA CASA</p>
@@ -292,7 +222,7 @@ function App() {
               </article>
             ))}
           </div>
-        </section>
+        </section>}
         <section className="intro" id="nosotros">
           <p className="eyebrow">DIRECTO DESDE CHINCHA ALTA</p>
           <h2>Sin poses. Con bastante queso.</h2>
@@ -345,6 +275,9 @@ function App() {
                 </div>
               </article>
             ))}
+            {catalogState === 'loading' && <p className="col-span-full py-12 text-center text-stone-500">Cargando la carta…</p>}
+            {catalogState === 'error' && <p className="col-span-full py-12 text-center text-stone-500">No pudimos cargar la carta. Inténtalo nuevamente en unos minutos.</p>}
+            {catalogState === 'ready' && shown.length === 0 && <p className="col-span-full py-12 text-center text-stone-500">Por ahora no hay productos disponibles en esta categoría.</p>}
           </div>
         </section>
         <section className="extras" id="extras">
