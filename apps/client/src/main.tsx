@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, UserRound, X } from 'lucide-react';
+import { Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, X } from 'lucide-react';
 import './tailwind.css';
 
 type Product = { id?: string; name: string; detail: string; price: number; category: string; tag?: string };
@@ -124,6 +124,8 @@ function App() {
   const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('la-yeka-user-token') || '');
   const [authError, setAuthError] = useState('');
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
+  const [cartNotice, setCartNotice] = useState('');
+  const cartNoticeTimeout = useRef<number | null>(null);
   useEffect(() => { const base = apiBase; if (base === null) return; fetch(base + '/api/catalog').then((r) => r.ok ? r.json() : []).then((categories) => { const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, tag: product.isFeatured ? 'Favorita' : undefined }))); if (next.length) setCatalog(next) }).catch(() => undefined) }, [])
   useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
   const shown = useMemo(() => active === 'Todo' ? catalog : catalog.filter((p) => p.category === active), [active, catalog]);
@@ -131,19 +133,27 @@ function App() {
   const topPicks = useMemo(() => catalog.filter((product) => featuredNames.includes(product.name)), [catalog]);
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
-  const add = (p: Product) =>
+  const add = (p: Product) => {
     setCart((c) => {
       const current = c.find((x) => x.name === p.name);
       return current
         ? c.map((x) => (x.name === p.name ? { ...x, qty: x.qty + 1 } : x))
         : [...c, { ...p, qty: 1 }];
     });
+    setCartNotice(`${p.name} agregado al carrito`);
+    if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
+    cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 2500);
+  };
+  useEffect(() => () => {
+    if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
+  }, []);
   const change = (name: string, d: number) =>
     setCart((c) =>
       c.flatMap((x) =>
         x.name === name && x.qty + d === 0 ? [] : x.name === name ? { ...x, qty: x.qty + d } : x,
       ),
     );
+  const remove = (name: string) => setCart((c) => c.filter((x) => x.name !== name));
   const send = async () => {
     if (!cart.length) return;
     if (!customerName.trim() || !customerPhone.trim()) return;
@@ -477,17 +487,24 @@ function App() {
                       <div>
                         <h3>{x.name}</h3>
                         <p>{money(x.price)} c/u</p>
-                      </div>
-                      <div className="qty">
-                        <button onClick={() => change(x.name, -1)}>
-                          <Minus size={15} />
-                        </button>
-                        <b>{x.qty}</b>
-                        <button onClick={() => change(x.name, 1)}>
-                          <Plus size={15} />
-                        </button>
+                        <div className="qty mt-2">
+                          <button onClick={() => change(x.name, -1)}>
+                            <Minus size={15} />
+                          </button>
+                          <b>{x.qty}</b>
+                          <button onClick={() => change(x.name, 1)}>
+                            <Plus size={15} />
+                          </button>
+                        </div>
                       </div>
                       <strong>{money(x.price * x.qty)}</strong>
+                      <button
+                        className="ml-2 grid size-8 place-items-center rounded border-0 bg-red-50 text-red-700 hover:bg-red-100"
+                        aria-label={`Eliminar ${x.name}`}
+                        onClick={() => remove(x.name)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -663,6 +680,15 @@ function App() {
           </section>
         </div>
       )}
+      <div
+        className={`pointer-events-none fixed bottom-5 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded bg-yeka-ink px-5 py-3 text-sm font-bold text-white shadow-xl transition-all duration-300 ${cartNotice ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <Check size={18} className="text-yeka-gold" />
+        {cartNotice}
+      </div>
     </>
   );
 }

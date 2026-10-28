@@ -112,7 +112,7 @@
   .empty h3 { @apply mb-0 text-xl font-extrabold text-yeka-ink; }
   .empty p { @apply mb-2 text-sm; }
   .cart-items { @apply grid divide-y divide-stone-200; }
-  .cart-item { @apply grid grid-cols-[1fr_auto_auto] items-center gap-3 py-4; }
+  .cart-item { @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 py-4; }
   .cart-item h3 { @apply mb-1 text-sm font-extrabold; }
   .cart-item p { @apply mb-0 text-xs text-stone-500; }
   .cart-item > strong { @apply font-mono text-sm; }
