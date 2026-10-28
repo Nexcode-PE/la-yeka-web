@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, X } from 'lucide-react';
 import './tailwind.css';
 
 type Product = { id?: string; name: string; detail: string; price: number; category: string; tag?: string };
@@ -126,8 +126,15 @@ function App() {
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [cartNotice, setCartNotice] = useState('');
   const cartNoticeTimeout = useRef<number | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => { const base = apiBase; if (base === null) return; fetch(base + '/api/catalog').then((r) => r.ok ? r.json() : []).then((categories) => { const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, tag: product.isFeatured ? 'Favorita' : undefined }))); if (next.length) setCatalog(next) }).catch(() => undefined) }, [])
   useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
+  useEffect(() => {
+    const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 400);
+    updateBackToTopVisibility();
+    window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateBackToTopVisibility);
+  }, []);
   const shown = useMemo(() => active === 'Todo' ? catalog : catalog.filter((p) => p.category === active), [active, catalog]);
   const categories = useMemo(() => catalog.length ? ['Todo', ...Array.from(new Set(catalog.map((product) => product.category)))] : fallbackCategories, [catalog]);
   const topPicks = useMemo(() => catalog.filter((product) => featuredNames.includes(product.name)), [catalog]);
@@ -689,6 +696,15 @@ function App() {
         <Check size={18} className="text-yeka-gold" />
         {cartNotice}
       </div>
+      {showBackToTop && (
+        <button
+          className="fixed right-5 bottom-5 z-40 flex size-12 items-center justify-center rounded-full border-0 bg-yeka-gold text-yeka-ink shadow-lg transition hover:-translate-y-1 hover:brightness-95"
+          aria-label="Volver al inicio"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        >
+          <ArrowUp size={21} />
+        </button>
+      )}
     </>
   );
 }
