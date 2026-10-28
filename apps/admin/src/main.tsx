@@ -3,9 +3,14 @@ import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
   CircleDollarSign,
+  ChartNoAxesCombined,
+  ChevronRight,
+  ExternalLink,
   Filter,
+  LayoutDashboard,
   LogOut,
   Package,
+  Plus,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -22,6 +27,7 @@ type Product = {
   isAvailable: boolean;
   category: { name: string } | null;
 };
+type Category = { id: string; name: string; position: number };
 type Order = {
   id: string;
   customerName: string | null;
@@ -40,7 +46,8 @@ type Claim = {
   status: string;
   createdAt: string;
 };
-type View = 'products' | 'orders' | 'claims';
+type Dashboard = { salesToday: number; ordersToday: number; pending: number; totalProducts: number; availableProducts: number; recentOrders: Order[] };
+type View = 'dashboard' | 'products' | 'orders' | 'claims';
 const api = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 const labels: Record<string, string> = {
   PENDING: 'Pendiente',
@@ -62,10 +69,12 @@ const statusOptions = {
 function Admin() {
   const [token, setToken] = useState(() => sessionStorage.getItem('la-yeka-admin-token') || '');
   const [user, setUser] = useState(() => sessionStorage.getItem('la-yeka-admin-user') || '');
-  const [view, setView] = useState<View>('products');
+  const [view, setView] = useState<View>('dashboard');
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [productQuery, setProductQuery] = useState('');
@@ -73,6 +82,7 @@ function Admin() {
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'paused'>('all');
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState('');
+  const [showProductForm, setShowProductForm] = useState(false);
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       if (!api) throw new Error('Configura VITE_API_URL para conectar la administración.');
@@ -97,7 +107,11 @@ function Admin() {
     setLoading(true);
     setError('');
     try {
-      if (view === 'products') setProducts(await request('/admin/products'));
+      if (view === 'dashboard') setDashboard(await request('/admin/dashboard'));
+      if (view === 'products') {
+        const [productData, categoryData] = await Promise.all([request('/admin/products'), request('/admin/categories')]);
+        setProducts(productData); setCategories(categoryData);
+      }
       if (view === 'orders') setOrders(await request('/admin/orders'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
     } catch (cause) {
@@ -152,10 +166,6 @@ function Admin() {
     () => products.filter((product) => product.isAvailable).length,
     [products],
   );
-  const categories = useMemo(
-    () => [...new Set(products.map((product) => product.category?.name).filter(Boolean))] as string[],
-    [products],
-  );
   const filteredProducts = useMemo(() => {
     const query = productQuery.trim().toLowerCase();
     return products.filter((product) => {
@@ -167,6 +177,25 @@ function Admin() {
       return matchesQuery && matchesCategory && matchesAvailability;
     });
   }, [availabilityFilter, categoryFilter, productQuery, products]);
+  const createProduct = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    try {
+      await request('/admin/products', { method: 'POST', body: JSON.stringify({
+        name: fields.get('name'), description: fields.get('description') || null,
+        price: Number(fields.get('price')), categoryId: fields.get('categoryId') || null,
+        imagePath: fields.get('imagePath') || null, isAvailable: true,
+      }) });
+      setShowProductForm(false); await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo crear el producto.'); }
+  };
+  const openWhatsApp = (order: Order) => {
+    const phone = order.customerPhone?.replace(/\D/g, '');
+    if (!phone) return setError('El pedido no tiene un número de celular válido.');
+    const normalized = phone.startsWith('51') ? phone : `51${phone}`;
+    const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido #${order.id.slice(0, 8).toUpperCase()}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}%0A%0ATotal: S/ ${Number(order.total).toFixed(2)}%0AEstado: ${labels[order.status]}.`;
+    window.open(`https://wa.me/${normalized}?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
   if (!token)
     return (
       <main className="grid min-h-screen place-items-center bg-stone-950 px-5 py-10 text-stone-950">
@@ -237,6 +266,7 @@ function Admin() {
           <nav className="grid gap-1">
             {(
               [
+                { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
                 { id: 'products', label: 'Catálogo', icon: Package },
                 { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
                 { id: 'claims', label: 'Reclamos', icon: ClipboardList },
@@ -266,7 +296,9 @@ function Admin() {
               <h2 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
                 {view === 'products'
                   ? 'Catálogo'
-                  : view === 'orders'
+                  : view === 'dashboard'
+                    ? 'Resumen de operación'
+                    : view === 'orders'
                     ? 'Pedidos'
                     : 'Libro de reclamaciones'}
               </h2>
@@ -279,8 +311,26 @@ function Admin() {
               {loading ? 'Actualizando…' : 'Actualizar datos'}
             </button>
           </div>
+          {view === 'dashboard' && dashboard && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <Stat value={`S/ ${dashboard.salesToday.toFixed(2)}`} label="Ventas de hoy" />
+                <Stat value={dashboard.ordersToday} label="Pedidos de hoy" tone="green" />
+                <Stat value={dashboard.pending} label="Por atender" tone="amber" />
+                <Stat value={`${dashboard.availableProducts}/${dashboard.totalProducts}`} label="Productos activos" tone="gray" />
+              </div>
+              <div className="mt-7 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
+                  <div><p className="font-black">Actividad reciente</p><p className="text-sm text-stone-500">Últimos pedidos recibidos</p></div>
+                  <button onClick={() => setView('orders')} className="inline-flex items-center gap-1 text-sm font-bold text-amber-700 hover:text-stone-950">Ver pedidos <ChevronRight size={16}/></button>
+                </div>
+                {dashboard.recentOrders.length ? dashboard.recentOrders.map((order) => <article key={order.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4 last:border-0"><div><p className="font-bold">{order.customerName || 'Cliente sin nombre'} <span className="font-mono text-xs text-stone-400">#{order.id.slice(0,8)}</span></p><p className="text-sm text-stone-500">{order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</p></div><div className="text-right"><p className="font-black">S/ {Number(order.total).toFixed(2)}</p><p className="text-xs font-bold text-amber-700">{labels[order.status]}</p></div></article>) : <Empty text="Todavía no hay pedidos para mostrar." />}
+              </div>
+            </>
+          )}
           {view === 'products' && (
             <>
+              <div className="mb-5 flex justify-end"><button onClick={() => setShowProductForm(true)} className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-stone-950 hover:bg-amber-500"><Plus size={17}/> Nuevo producto</button></div>
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <Stat value={products.length} label="Productos registrados" />
                 <Stat value={available} label="A la venta" tone="green" />
@@ -295,7 +345,7 @@ function Admin() {
                   <Filter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
                   <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-3 text-sm font-semibold outline-none focus:border-amber-400">
                     <option value="all">Todas las categorías</option>
-                    {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                    {categories.map((category) => <option key={category.id} value={category.name}>{category.name}</option>)}
                   </select>
                 </label>
                 <select value={availabilityFilter} onChange={(event) => setAvailabilityFilter(event.target.value as 'all' | 'available' | 'paused')} className="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2.5 text-sm font-semibold outline-none focus:border-amber-400">
@@ -374,6 +424,7 @@ function Admin() {
                         options={statusOptions.orders}
                         onChange={(status) => update('orders', order.id, { status })}
                       />
+                      <button onClick={() => openWhatsApp(order)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"><ExternalLink size={15}/> WhatsApp</button>
                     </div>
                   </article>
                 ))
@@ -408,12 +459,27 @@ function Admin() {
               )}
             </div>
           )}
+          {showProductForm && (
+            <div className="fixed inset-0 z-50 grid place-items-center bg-stone-950/60 p-4">
+              <form onSubmit={createProduct} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+                <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black tracking-[0.18em] text-amber-700">CATÁLOGO</p><h3 className="mt-1 text-2xl font-black">Nuevo producto</h3></div><button type="button" onClick={() => setShowProductForm(false)} className="rounded-lg px-3 py-2 text-sm font-bold text-stone-500 hover:bg-stone-100">Cerrar</button></div>
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Nombre<input name="name" required minLength={2} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold">Precio (S/)<input name="price" required type="number" min="0.1" step="0.1" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold">Categoría<select name="categoryId" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400"><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Descripción<textarea name="description" rows={3} className="resize-none rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">URL de imagen (opcional)<input name="imagePath" type="url" placeholder="https://…" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                </div>
+                <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={() => setShowProductForm(false)} className="rounded-xl px-4 py-3 text-sm font-bold hover:bg-stone-100">Cancelar</button><button className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black hover:bg-amber-500">Crear producto</button></div>
+              </form>
+            </div>
+          )}
         </section>
       </div>
     </main>
   );
 }
-function Stat({ value, label, tone = 'amber' }: { value: number; label: string; tone?: 'amber' | 'green' | 'gray' }) {
+function Stat({ value, label, tone = 'amber' }: { value: number | string; label: string; tone?: 'amber' | 'green' | 'gray' }) {
   const accents = {
     amber: 'bg-amber-400',
     green: 'bg-emerald-400',

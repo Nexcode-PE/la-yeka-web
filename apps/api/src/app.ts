@@ -12,7 +12,7 @@ app.use('*', cors({
     if (!origin) return allowedOrigins[0] || '*'
     return allowedOrigins.length === 0 || allowedOrigins.includes(origin) ? origin : ''
   },
-  allowMethods: ['GET', 'POST', 'PATCH'],
+  allowMethods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
 app.get('/health', (c) => c.json({ ok: true }))
@@ -37,8 +37,31 @@ app.get('/orders/me', async (c) => {
   }))
 })
 app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.product.findMany({ include:{category:true},orderBy:[{category:{position:'asc'}},{position:'asc'}] })) })
-const productUpdate = z.object({ price:z.number().positive().max(999).optional(), isAvailable:z.boolean().optional(), name:z.string().min(2).max(100).optional(), description:z.string().max(500).optional() })
+app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'} })) })
+app.get('/admin/dashboard', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const today = new Date(); today.setHours(0,0,0,0)
+  const [todayOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
+    db.order.findMany({ where:{createdAt:{gte:today}, status:{not:'CANCELLED'}}, select:{total:true} }),
+    db.order.count({ where:{status:{in:['PENDING','CONFIRMED','PREPARING']}} }),
+    db.product.count(), db.product.count({where:{isAvailable:true}}),
+    db.order.findMany({include:{items:true},orderBy:{createdAt:'desc'},take:5}),
+  ])
+  return c.json({
+    salesToday: todayOrders.reduce((total, order) => total + Number(order.total), 0),
+    ordersToday: todayOrders.length, pending, totalProducts, availableProducts, recentOrders,
+  })
+})
+const productInput = z.object({
+  name:z.string().trim().min(2).max(100), description:z.string().trim().max(500).nullable().optional(),
+  price:z.number().positive().max(999), categoryId:z.string().uuid().nullable().optional(), imagePath:z.string().url().nullable().optional(),
+  isAvailable:z.boolean().optional(), isFeatured:z.boolean().optional(), position:z.number().int().min(0).optional(),
+})
+const productUpdate = productInput.partial()
+app.post('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productInput.safeParse(await c.req.json()); if(!parsed.success) return c.json({error:'Revisa los datos del producto.'},400); return c.json(await db.product.create({data:parsed.data,include:{category:true}}),201) })
 app.patch('/admin/products/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productUpdate.safeParse(await c.req.json()); if(!parsed.success) return c.json({ error:'Datos inválidos' },400); const product=await db.product.update({ where:{id:c.req.param('id')},data:parsed.data }); return c.json(product) })
+app.delete('/admin/products/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); await db.product.delete({where:{id:c.req.param('id')}}); return c.body(null,204) })
+app.post('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=z.object({name:z.string().trim().min(2).max(50)}).safeParse(await c.req.json()); if(!parsed.success)return c.json({error:'Nombre de categoría inválido'},400); const position=await db.category.count(); try { return c.json(await db.category.create({data:{name:parsed.data.name,position}}),201) } catch { return c.json({error:'La categoría ya existe.'},409) } })
 app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.order.findMany({ include:{items:true},orderBy:{createdAt:'desc'},take:100 })) })
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })
 const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED']) })
