@@ -19,7 +19,7 @@ const featuredNames = ['La Yekaburger Full', 'La Mixta Full', 'Fileteada Hawaian
 const money = (n: number) => `S/ ${n.toFixed(2)}`;
 const wa = import.meta.env.VITE_WHATSAPP_NUMBER || '51974121550';
 // En producción, la API se publica en el mismo dominio bajo /api.
-const apiBase = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : null);
+const apiBase = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
 const productVisual = (product: Product) => {
   if (product.category === 'Salchipapas') return '/images/salchipapas-3d.png';
   if (product.name === 'Coca-Cola 500 ml') return '/images/coca-cola-500ml.png';
