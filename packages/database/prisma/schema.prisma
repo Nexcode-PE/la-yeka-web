@@ -50,6 +50,10 @@ model Order {
   userId        String?     @map("user_id") @db.Uuid
   customerName  String?     @map("customer_name")
   customerPhone String?     @map("customer_phone")
+  fulfillment   FulfillmentMethod @default(DELIVERY)
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  address       String?
+  district      String?
   notes         String?
   total         Decimal     @db.Decimal(8, 2)
   status        OrderStatus @default(PENDING)
@@ -96,6 +100,18 @@ enum OrderStatus {
   PREPARING
   READY
   CANCELLED
+}
+
+enum FulfillmentMethod {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  CASH
+  YAPE
+  TRANSFER
+  CARD
 }
 
 enum UserRole {

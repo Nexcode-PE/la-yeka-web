@@ -36,6 +36,10 @@ function App() {
   const [note, setNote] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [fulfillment, setFulfillment] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [address, setAddress] = useState('');
+  const [district, setDistrict] = useState('Chincha Alta');
   const [sending, setSending] = useState(false);
   const [dialog, setDialog] = useState<'terms' | 'privacy' | 'claims' | 'account' | null>(null);
   const [claimSent, setClaimSent] = useState(false);
@@ -93,19 +97,19 @@ function App() {
   const remove = (name: string) => setCart((c) => c.filter((x) => x.name !== name));
   const send = async () => {
     if (!cart.length) return;
-    if (!customerName.trim() || !customerPhone.trim()) return;
+    if (!customerName.trim() || !customerPhone.trim() || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))) return;
     setSending(true);
     const api = apiBase;
     let orderId = '';
     try {
       if (api !== null && cart.every((item) => item.id)) {
-        const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
+        const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, fulfillment, paymentMethod, address: fulfillment === 'DELIVERY' ? address : undefined, district: fulfillment === 'DELIVERY' ? district : undefined, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
         if (!response.ok) throw new Error('No fue posible registrar el pedido');
         orderId = (await response.json()).id;
       }
     } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
-    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0ATotal: ${encodeURIComponent(money(total))}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
+    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
     window.open(`https://wa.me/${wa}?text=${text}`, '_blank');
     setSending(false);
   };
@@ -450,6 +454,11 @@ function App() {
                 </div>
                 <input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" />
                 <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" />
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
+                  <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option><option value="TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option></select>
+                </div>
+                {fulfillment === 'DELIVERY' && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -459,7 +468,7 @@ function App() {
                   <span>Total</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim()}>
+                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
                   {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'} <ChevronRight size={19} />
                 </button>
                 <p className="secure">

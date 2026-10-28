@@ -35,6 +35,10 @@ type Order = {
   total: string;
   status: string;
   createdAt: string;
+  fulfillment: 'DELIVERY' | 'PICKUP';
+  paymentMethod: 'CASH' | 'YAPE' | 'TRANSFER' | 'CARD';
+  address: string | null;
+  district: string | null;
   items: Array<{ productName: string; quantity: number }>;
 };
 type Claim = {
@@ -46,7 +50,7 @@ type Claim = {
   status: string;
   createdAt: string;
 };
-type Dashboard = { salesToday: number; ordersToday: number; pending: number; totalProducts: number; availableProducts: number; recentOrders: Order[] };
+type Dashboard = { salesToday: number; ordersToday: number; pending: number; totalProducts: number; availableProducts: number; recentOrders: Order[]; paymentBreakdown: Record<string, number> };
 type View = 'dashboard' | 'products' | 'orders' | 'claims';
 const api = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
 const brandLogo = '/images/logo-la-yeka-v2.png';
@@ -61,6 +65,12 @@ const labels: Record<string, string> = {
   RESOLVED: 'Resuelto',
   COMPLAINT: 'Reclamo',
   SERVICE_ISSUE: 'Queja',
+  DELIVERY: 'Delivery',
+  PICKUP: 'Recojo en local',
+  CASH: 'Efectivo',
+  YAPE: 'Yape',
+  TRANSFER: 'Transferencia',
+  CARD: 'Tarjeta',
 };
 const statusOptions = {
   orders: ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED'],
@@ -178,6 +188,11 @@ function Admin() {
       return matchesQuery && matchesCategory && matchesAvailability;
     });
   }, [availabilityFilter, categoryFilter, productQuery, products]);
+  const operationColumns = useMemo(() => [
+    { title: 'Nuevos', statuses: ['PENDING'], tone: 'border-amber-400' },
+    { title: 'En cocina', statuses: ['CONFIRMED', 'PREPARING'], tone: 'border-orange-400' },
+    { title: 'Listos / entrega', statuses: ['READY'], tone: 'border-emerald-400' },
+  ].map((column) => ({ ...column, orders: orders.filter((order) => column.statuses.includes(order.status)) })), [orders]);
   const createProduct = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
@@ -335,6 +350,7 @@ function Admin() {
                 </div>
                 {dashboard.recentOrders.length ? dashboard.recentOrders.map((order) => <article key={order.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4 last:border-0"><div><p className="font-bold">{order.customerName || 'Cliente sin nombre'} <span className="font-mono text-xs text-stone-400">#{order.id.slice(0,8)}</span></p><p className="text-sm text-stone-500">{order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</p></div><div className="text-right"><p className="font-black">S/ {Number(order.total).toFixed(2)}</p><p className="text-xs font-bold text-amber-700">{labels[order.status]}</p></div></article>) : <Empty text="Todavía no hay pedidos para mostrar." />}
               </div>
+              <div className="mt-7 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"><p className="font-black">Caja de hoy</p><p className="mt-1 text-sm text-stone-500">Ventas confirmadas por medio de pago.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(dashboard.paymentBreakdown).map(([method, total]) => <div key={method} className="rounded-xl bg-stone-50 p-4"><p className="text-xs font-bold text-stone-500">{labels[method]}</p><p className="mt-1 text-xl font-black">S/ {total.toFixed(2)}</p></div>)}</div></div>
             </>
           )}
           {view === 'products' && (
@@ -406,12 +422,12 @@ function Admin() {
             </>
           )}
           {view === 'orders' && (
-            <div className="grid gap-4">
+            <div className="grid gap-4 xl:grid-cols-3">
               {orders.length === 0 ? (
-                <Empty text="Aún no hay pedidos registrados." />
+                <div className="xl:col-span-3"><Empty text="Aún no hay pedidos registrados." /></div>
               ) : (
-                orders.map((order) => (
-                  <article className="rounded-2xl bg-white p-5 shadow-sm" key={order.id}>
+                operationColumns.map((column) => <section key={column.title} className={`rounded-2xl border-t-4 ${column.tone} bg-stone-100/70 p-3`}><div className="mb-3 flex items-center justify-between px-2"><h3 className="font-black">{column.title}</h3><span className="rounded-full bg-white px-2 py-1 text-xs font-bold">{column.orders.length}</span></div><div className="grid gap-3">{column.orders.map((order) => (
+                  <article className="rounded-xl bg-white p-4 shadow-sm" key={order.id}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-black">
@@ -422,6 +438,8 @@ function Admin() {
                           {order.customerPhone} ·{' '}
                           {new Date(order.createdAt).toLocaleString('es-PE')}
                         </p>
+                        <p className="mt-2 text-xs font-bold text-amber-700">{labels[order.fulfillment]} · {labels[order.paymentMethod]}</p>
+                        {order.fulfillment === 'DELIVERY' && <p className="mt-1 text-xs text-stone-500">{order.address} · {order.district}</p>}
                         <p className="mt-3 text-sm">
                           {order.items
                             .map((item) => `${item.quantity}× ${item.productName}`)
@@ -436,7 +454,7 @@ function Admin() {
                       <button onClick={() => openWhatsApp(order)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"><ExternalLink size={15}/> WhatsApp</button>
                     </div>
                   </article>
-                ))
+                ))}{column.orders.length === 0 && <p className="rounded-xl bg-white/70 p-5 text-center text-sm text-stone-400">Sin pedidos</p>}</div></section>)
               )}
             </div>
           )}

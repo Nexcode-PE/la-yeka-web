@@ -42,7 +42,7 @@ app.get('/admin/dashboard', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
   const today = new Date(); today.setHours(0,0,0,0)
   const [todayOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
-    db.order.findMany({ where:{createdAt:{gte:today}, status:{not:'CANCELLED'}}, select:{total:true} }),
+    db.order.findMany({ where:{createdAt:{gte:today}, status:{not:'CANCELLED'}}, select:{total:true,paymentMethod:true} }),
     db.order.count({ where:{status:{in:['PENDING','CONFIRMED','PREPARING']}} }),
     db.product.count(), db.product.count({where:{isAvailable:true}}),
     db.order.findMany({include:{items:true},orderBy:{createdAt:'desc'},take:5}),
@@ -50,6 +50,7 @@ app.get('/admin/dashboard', async (c) => {
   return c.json({
     salesToday: todayOrders.reduce((total, order) => total + Number(order.total), 0),
     ordersToday: todayOrders.length, pending, totalProducts, availableProducts, recentOrders,
+    paymentBreakdown: Object.fromEntries(['CASH','YAPE','TRANSFER','CARD'].map((method) => [method, todayOrders.filter((order) => order.paymentMethod === method).reduce((total, order) => total + Number(order.total), 0)])),
   })
 })
 const productInput = z.object({
@@ -69,13 +70,18 @@ app.patch('/admin/orders/:id', async (c) => { if (!await requireAdmin(c.req.head
 const claimStatus = z.object({ status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']) })
 app.patch('/admin/claims/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = claimStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.claim.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })
 
-const orderInput = z.object({ customerName:z.string().min(2), customerPhone:z.string().min(6), notes:z.string().max(500).optional(), items:z.array(z.object({ productId:z.string().uuid(), quantity:z.number().int().min(1).max(20) })).min(1) })
+const orderInput = z.object({
+  customerName:z.string().min(2), customerPhone:z.string().min(6), notes:z.string().max(500).optional(),
+  fulfillment:z.enum(['DELIVERY','PICKUP']).default('DELIVERY'), paymentMethod:z.enum(['CASH','YAPE','TRANSFER','CARD']).default('CASH'),
+  address:z.string().trim().min(5).max(250).optional(), district:z.string().trim().min(2).max(80).optional(),
+  items:z.array(z.object({ productId:z.string().uuid(), quantity:z.number().int().min(1).max(20) })).min(1),
+}).superRefine((data, context) => { if (data.fulfillment === 'DELIVERY' && (!data.address || !data.district)) context.addIssue({ code:'custom', message:'Indica dirección y distrito para el delivery.' }) })
 app.post('/orders', async (c) => {
   const parsed = orderInput.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Datos inválidos' },400)
   const ids = parsed.data.items.map((item) => item.productId); const products = await db.product.findMany({ where:{ id:{ in:ids }, isAvailable:true } }); if (products.length !== ids.length) return c.json({ error:'Producto no disponible' },409)
   const byId = new Map(products.map((product) => [product.id, product])); const total = parsed.data.items.reduce((sum,item) => sum + Number(byId.get(item.productId)!.price) * item.quantity,0)
   const user = await requireUser(c.req.header('authorization'))
-  const order = await db.order.create({ data:{ userId:user?.id, customerName:parsed.data.customerName, customerPhone:parsed.data.customerPhone, notes:parsed.data.notes, total, items:{ create:parsed.data.items.map((item) => { const p=byId.get(item.productId)!; return { productId:p.id, productName:p.name, unitPrice:p.price, quantity:item.quantity } }) } } })
+  const order = await db.order.create({ data:{ userId:user?.id, customerName:parsed.data.customerName, customerPhone:parsed.data.customerPhone, notes:parsed.data.notes, fulfillment:parsed.data.fulfillment, paymentMethod:parsed.data.paymentMethod, address:parsed.data.address, district:parsed.data.district, total, items:{ create:parsed.data.items.map((item) => { const p=byId.get(item.productId)!; return { productId:p.id, productName:p.name, unitPrice:p.price, quantity:item.quantity } }) } } })
   return c.json({ id:order.id, total },201)
 })
 const claimInput=z.object({ customerName:z.string().min(2),document:z.string().min(4),email:z.string().email(),phone:z.string().min(6),kind:z.enum(['COMPLAINT','SERVICE_ISSUE']),orderReference:z.string().optional(),detail:z.string().min(10),requestedSolution:z.string().min(5) })
