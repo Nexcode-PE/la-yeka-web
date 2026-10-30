@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
   CircleDollarSign,
+  Menu,
+  Bell,
   ChartNoAxesCombined,
   ChevronRight,
   ExternalLink,
@@ -20,6 +22,7 @@ import {
   Trash2,
   Upload,
   UtensilsCrossed,
+  X,
 } from 'lucide-react';
 import './styles.css';
 
@@ -100,6 +103,9 @@ function Admin() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productImage, setProductImage] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCompact, setSidebarCompact] = useState(false);
+  const [notice, setNotice] = useState('');
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       if (!api) throw new Error('Configura VITE_API_URL para conectar la administración.');
@@ -173,6 +179,7 @@ function Admin() {
     setSavingId(id);
     try {
       await request(`/admin/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      setNotice('Cambios guardados correctamente.');
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
@@ -232,13 +239,14 @@ function Admin() {
         await request(`/admin/products/${product.id}`, { method: 'PATCH', body: JSON.stringify({ imagePath: url }) });
       }
       setShowProductForm(false); setEditingProduct(null); setProductImage(null); await load();
+      setNotice(editingProduct ? 'Producto actualizado correctamente.' : 'Producto creado correctamente.');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar el producto.'); }
     finally { setSavingProduct(false); }
   };
   const deleteProduct = async (product: Product) => {
     if (!window.confirm(`¿Eliminar “${product.name}”? Esta acción no se puede deshacer.`)) return;
     setSavingId(product.id); setError('');
-    try { await request(`/admin/products/${product.id}`, { method: 'DELETE' }); await load(); }
+    try { await request(`/admin/products/${product.id}`, { method: 'DELETE' }); await load(); setNotice('Producto eliminado correctamente.'); }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo eliminar el producto.'); }
     finally { setSavingId(''); }
   };
@@ -254,26 +262,26 @@ function Admin() {
   };
   if (!token)
     return (
-      <main className="relative grid min-h-screen place-items-center overflow-hidden bg-stone-950 px-5 py-10 text-stone-950 before:absolute before:inset-x-0 before:top-0 before:h-2 before:bg-amber-400">
-        <div className="pointer-events-none absolute -left-20 -top-28 size-80 rounded-full bg-amber-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-orange-600/15 blur-3xl" />
-        <section className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/10 bg-stone-50 p-8 shadow-2xl shadow-black/40 sm:p-10">
-          <div className="-mx-8 -mt-8 mb-8 flex h-28 items-center justify-center bg-stone-950 sm:-mx-10 sm:-mt-10">
+      <main className="relative grid min-h-screen place-items-center overflow-hidden bg-slate-950 px-5 py-10 text-slate-950 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-[#4169ff]">
+        <div className="pointer-events-none absolute -left-20 -top-28 size-80 rounded-full bg-[#4169ff]/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-blue-500/10 blur-3xl" />
+        <section className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-white p-7 shadow-2xl shadow-black/30 sm:p-9">
+          <div className="-mx-7 -mt-7 mb-7 flex h-24 items-center justify-center bg-slate-950 sm:-mx-9 sm:-mt-9">
             <img src={brandLogo} alt="La Yeka" className="h-20 w-auto object-contain" />
           </div>
           <div className="mb-7 flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-amber-400"><ShieldCheck size={22} /></div>
-            <p className="text-xs font-black tracking-[0.2em] text-amber-700">LA YEKA · ADMIN</p>
+            <div className="flex size-11 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4169ff]"><ShieldCheck size={22} /></div>
+            <p className="text-xs font-bold tracking-[0.16em] text-[#4169ff]">LA YEKA · ADMIN</p>
           </div>
-          <h1 className="text-4xl font-black tracking-tight">Panel de operación</h1>
-          <p className="mt-3 text-sm leading-6 text-stone-600">
+          <h1 className="text-3xl font-bold tracking-tight">Panel de operación</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
             Gestiona catálogo, pedidos y solicitudes de clientes.
           </p>
           <form className="mt-8 grid gap-4" onSubmit={login}>
             <label className="grid gap-2 text-sm font-bold">
               Correo administrativo
               <input
-                className="rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none ring-amber-400 focus:ring-2"
+                className="h-11 rounded-lg border border-slate-200 bg-white px-3 outline-none ring-[#4169ff] focus:ring-2"
                 name="email"
                 type="email"
                 required
@@ -282,7 +290,7 @@ function Admin() {
             <label className="grid gap-2 text-sm font-bold">
               Contraseña
               <input
-                className="rounded-xl border border-stone-300 bg-white px-4 py-3 outline-none ring-amber-400 focus:ring-2"
+                className="h-11 rounded-lg border border-slate-200 bg-white px-3 outline-none ring-[#4169ff] focus:ring-2"
                 name="password"
                 type="password"
                 minLength={10}
@@ -291,7 +299,7 @@ function Admin() {
             </label>
             {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
             <button
-              className="mt-2 rounded-xl bg-stone-950 px-4 py-3 font-bold text-white hover:bg-amber-500 hover:text-stone-950"
+              className="mt-2 h-11 rounded-lg bg-[#4169ff] px-4 font-semibold text-white transition hover:bg-[#3156d8]"
               type="submit"
             >
               Ingresar al panel
@@ -301,31 +309,28 @@ function Admin() {
       </main>
     );
   return (
-    <main className="min-h-screen bg-[#f6f4ef] text-stone-950">
-      <header className="sticky top-0 z-30 border-b border-amber-400/30 bg-stone-950 text-white shadow-xl shadow-black/20">
-        <div className="flex min-h-20 w-full items-center justify-between gap-5 px-5 sm:px-8 lg:px-10">
+    <main className="min-h-screen overflow-x-hidden bg-[#f7f8fc] font-sans text-slate-950">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 text-slate-950 backdrop-blur">
+        <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex h-14 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30 px-2 sm:h-16 sm:w-24">
-              <img src={brandLogo} alt="La Yeka" className="max-h-14 w-auto object-contain" />
+            <button aria-label="Abrir navegación" onClick={() => setSidebarOpen(true)} className="grid size-10 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 xl:hidden"><Menu size={21}/></button>
+            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-950 px-1 sm:flex">
+              <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
             </div>
             <div>
-              <p className="text-[10px] font-black tracking-[0.2em] text-amber-400 sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
-              <h1 className="mt-1 text-base font-black sm:text-xl">Hola, {user}</h1>
+              <p className="text-[10px] font-bold tracking-[0.16em] text-[#4169ff] sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
+              <h1 className="mt-0.5 text-sm font-bold sm:text-base">Hola, {user}</h1>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="inline-flex items-center gap-2 rounded-lg border border-stone-700 px-3 py-2 text-sm font-bold hover:border-amber-400"
-          >
-            <LogOut size={16} />
-            Salir
-          </button>
+          <div className="flex items-center gap-2"><button aria-label="Notificaciones" title="No hay notificaciones" className="grid size-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><Bell size={19}/></button><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold hover:border-slate-300 hover:bg-slate-50"><LogOut size={16} /><span className="hidden sm:inline">Salir</span></button></div>
         </div>
       </header>
-      <div className="grid w-full gap-0 xl:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside className="border-b border-stone-200 bg-white px-4 py-4 xl:min-h-[calc(100vh-5rem)] xl:border-b-0 xl:border-r xl:px-5 xl:py-7">
-          <div className="mb-5 hidden px-3 xl:block">
-            <p className="text-xs font-black tracking-[0.18em] text-stone-400">MÓDULOS</p>
+      {sidebarOpen && <button aria-label="Cerrar navegación" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden" />}
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-200 xl:top-16 xl:z-30 xl:h-[calc(100vh-4rem)] xl:translate-x-0 xl:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCompact ? 'xl:w-20' : 'xl:w-60'}`}>
+          <div className="mb-6 flex items-center justify-between px-2 xl:hidden"><img src={brandLogo} alt="La Yeka" className="h-10 w-auto"/><button aria-label="Cerrar navegación" onClick={() => setSidebarOpen(false)} className="grid size-9 place-items-center rounded-lg hover:bg-slate-100"><X size={20}/></button></div>
+          <div className="mb-4 hidden items-center justify-between px-2 xl:flex">
+            {!sidebarCompact && <p className="text-[11px] font-bold tracking-[0.14em] text-slate-400">OPERACIÓN</p>}
+            <button aria-label="Contraer menú" onClick={() => setSidebarCompact((value) => !value)} className="grid size-8 place-items-center rounded-md text-slate-400 hover:bg-slate-100">{sidebarCompact ? <Menu size={18}/> : <Menu size={18}/>}</button>
           </div>
           <nav className="grid gap-1">
             {(
@@ -338,26 +343,29 @@ function Admin() {
             ).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
-                onClick={() => setView(id)}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-amber-400 text-stone-950 shadow-sm' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-950'}`}
+                onClick={() => { setView(id); setSidebarOpen(false); }}
+                title={sidebarCompact ? label : undefined}
+                aria-label={label}
+                className={`flex h-11 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'} ${sidebarCompact ? 'justify-center xl:px-0' : ''}`}
               >
                 <Icon size={18} />
-                {label}
+                <span className={sidebarCompact ? 'xl:hidden' : ''}>{label}</span>
               </button>
             ))}
           </nav>
-        </aside>
-        <section className="min-w-0 px-5 py-7 sm:px-8 lg:px-10 xl:px-12">
+      </aside>
+      <section className={`min-w-0 px-4 pb-24 pt-6 sm:px-6 lg:px-8 xl:pb-8 ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
           {error && (
-            <p className="mb-5 flex items-center gap-2 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            <p role="alert" className="mb-5 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
               <TriangleAlert size={18} />
               {error}
             </p>
           )}
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          {notice && <div role="status" className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-[#eef2ff] px-4 py-3 text-sm font-medium text-[#3156d8]"><span>{notice}</span><button aria-label="Cerrar aviso" onClick={() => setNotice('')} className="rounded p-1 hover:bg-white"><X size={16}/></button></div>}
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-black tracking-[0.2em] text-amber-700">OPERACIÓN</p>
-              <h2 className="mt-1 text-3xl font-black tracking-tight sm:text-4xl">
+              <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">OPERACIÓN</p>
+              <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
                 {view === 'products'
                   ? 'Catálogo'
                   : view === 'dashboard'
@@ -369,13 +377,14 @@ function Admin() {
             </div>
             <button
               onClick={load}
-              className="inline-flex items-center gap-2 rounded-xl bg-stone-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-500 hover:text-stone-950 disabled:cursor-wait"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait"
             >
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               {loading ? 'Actualizando…' : 'Actualizar datos'}
             </button>
           </div>
-          {view === 'dashboard' && dashboard && (
+          {loading && !dashboard && view === 'dashboard' && <DashboardSkeleton />}
+          {view === 'dashboard' && dashboard && !loading && (
             <>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <Stat value={`S/ ${dashboard.salesToday.toFixed(2)}`} label="Ventas de hoy" />
@@ -383,25 +392,25 @@ function Admin() {
                 <Stat value={dashboard.pending} label="Por atender" tone="amber" />
                 <Stat value={`${dashboard.availableProducts}/${dashboard.totalProducts}`} label="Productos activos" tone="gray" />
               </div>
-              <div className="mt-7 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+              <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
                 <div className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
                   <div><p className="font-black">Actividad reciente</p><p className="text-sm text-stone-500">Últimos pedidos recibidos</p></div>
-                  <button onClick={() => setView('orders')} className="inline-flex items-center gap-1 text-sm font-bold text-amber-700 hover:text-stone-950">Ver pedidos <ChevronRight size={16}/></button>
+                  <button onClick={() => setView('orders')} className="inline-flex items-center gap-1 text-sm font-semibold text-[#4169ff] hover:text-[#274ccf]">Ver pedidos <ChevronRight size={16}/></button>
                 </div>
                 {dashboard.recentOrders.length ? dashboard.recentOrders.map((order) => <article key={order.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 px-5 py-4 last:border-0"><div><p className="font-bold">{order.customerName || 'Cliente sin nombre'} <span className="font-mono text-xs text-stone-400">#{order.id.slice(0,8)}</span></p><p className="text-sm text-stone-500">{order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}</p></div><div className="text-right"><p className="font-black">S/ {Number(order.total).toFixed(2)}</p><p className="text-xs font-bold text-amber-700">{labels[order.status]}</p></div></article>) : <Empty text="Todavía no hay pedidos para mostrar." />}
               </div>
-              <div className="mt-7 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm"><p className="font-black">Caja de hoy</p><p className="mt-1 text-sm text-stone-500">Ventas confirmadas por medio de pago.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(dashboard.paymentBreakdown).map(([method, total]) => <div key={method} className="rounded-xl bg-stone-50 p-4"><p className="text-xs font-bold text-stone-500">{labels[method]}</p><p className="mt-1 text-xl font-black">S/ {total.toFixed(2)}</p></div>)}</div></div>
+              <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30"><p className="font-bold">Caja de hoy</p><p className="mt-1 text-sm text-slate-500">Ventas confirmadas por medio de pago.</p><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(dashboard.paymentBreakdown).map(([method, total]) => <div key={method} className="rounded-lg border border-slate-100 bg-slate-50 p-4"><p className="text-xs font-medium text-slate-500">{labels[method]}</p><p className="mt-1 text-xl font-bold">S/ {total.toFixed(2)}</p></div>)}</div></div>
             </>
           )}
           {view === 'products' && (
             <>
-              <div className="mb-5 flex justify-end"><button onClick={() => openProductForm()} className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-stone-950 hover:bg-amber-500"><Plus size={17}/> Nuevo producto</button></div>
+              <div className="mb-5 flex justify-end"><button onClick={() => openProductForm()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"><Plus size={17}/> Nuevo producto</button></div>
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <Stat value={products.length} label="Productos registrados" />
                 <Stat value={available} label="A la venta" tone="green" />
                 <Stat value={products.length - available} label="Pausados" tone="gray" />
               </div>
-              <div className="mb-5 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+              <div className="mb-5 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
                 <label className="relative block">
                   <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
                   <input value={productQuery} onChange={(event) => setProductQuery(event.target.value)} className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-amber-400 focus:bg-white" placeholder="Buscar por producto o ingrediente" />
@@ -534,46 +543,56 @@ function Admin() {
             </div>
           )}
           {showProductForm && (
-            <div className="fixed inset-0 z-50 grid place-items-center bg-stone-950/60 p-4">
-              <form key={editingProduct?.id || 'new'} onSubmit={saveProduct} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-                <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black tracking-[0.18em] text-amber-700">CATÁLOGO</p><h3 className="mt-1 text-2xl font-black">{editingProduct ? 'Editar producto' : 'Nuevo producto'}</h3></div><button type="button" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="rounded-lg px-3 py-2 text-sm font-bold text-stone-500 hover:bg-stone-100">Cerrar</button></div>
+            <div role="dialog" aria-modal="true" aria-labelledby="product-dialog-title" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4">
+              <form key={editingProduct?.id || 'new'} onSubmit={saveProduct} className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl sm:p-7">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">CATÁLOGO</p><h3 id="product-dialog-title" className="mt-1 text-xl font-bold">{editingProduct ? 'Editar producto' : 'Nuevo producto'}</h3></div><button type="button" aria-label="Cerrar" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18}/></button></div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Nombre<input name="name" defaultValue={editingProduct?.name} required minLength={2} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
-                  <label className="grid gap-1 text-sm font-bold">Precio (S/)<input name="price" defaultValue={editingProduct?.price} required type="number" min="0.1" step="0.1" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
-                  <label className="grid gap-1 text-sm font-bold">Categoría<select name="categoryId" defaultValue={editingProduct?.category?.id || ''} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400"><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Descripción<textarea name="description" defaultValue={editingProduct?.description || ''} rows={3} className="resize-none rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Nombre<input name="name" defaultValue={editingProduct?.name} required minLength={2} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+                  <label className="grid gap-1.5 text-sm font-semibold">Precio (S/)<input name="price" defaultValue={editingProduct?.price} required type="number" min="0.1" step="0.1" className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+                  <label className="grid gap-1.5 text-sm font-semibold">Categoría<select name="categoryId" defaultValue={editingProduct?.category?.id || ''} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+                  <label className="grid gap-1.5 text-sm font-semibold sm:col-span-2">Descripción<textarea name="description" defaultValue={editingProduct?.description || ''} rows={3} className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
                   <label className="grid gap-2 text-sm font-bold sm:col-span-2">Imagen del producto
-                    <span className="flex items-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3 font-normal text-stone-600"><Upload size={18} className="text-amber-700"/><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setProductImage(event.target.files?.[0] || null)} className="min-w-0 text-sm" /></span>
-                    <span className="text-xs font-normal text-stone-500">JPG, PNG o WEBP; máximo 4 MB. {productImage ? `Seleccionada: ${productImage.name}` : editingProduct?.imagePath ? 'Conservará la imagen actual si no eliges otra.' : 'Si no cargas una, se mostrará el ícono predeterminado.'}</span>
+                    <span className="flex items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 font-normal text-slate-600"><Upload size={18} className="text-[#4169ff]"/><input aria-label="Archivo de imagen" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setProductImage(event.target.files?.[0] || null)} className="min-w-0 text-sm" /></span>
+                    <span className="text-xs font-normal text-slate-500">JPG, PNG o WEBP; máximo 4 MB. {productImage ? `Seleccionada: ${productImage.name}` : editingProduct?.imagePath ? 'Conservará la imagen actual si no eliges otra.' : 'Si no cargas una, se mostrará el ícono predeterminado.'}</span>
                   </label>
-                  <label className="flex items-center gap-2 text-sm font-bold sm:col-span-2"><input name="isAvailable" type="checkbox" defaultChecked={editingProduct ? editingProduct.isAvailable : true} className="size-4 accent-amber-500" /> Disponible para la venta</label>
+                  <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2"><input name="isAvailable" type="checkbox" defaultChecked={editingProduct ? editingProduct.isAvailable : true} className="size-4 accent-[#4169ff]" /> Disponible para la venta</label>
                 </div>
-                <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="rounded-xl px-4 py-3 text-sm font-bold hover:bg-stone-100">Cancelar</button><button disabled={savingProduct} className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black hover:bg-amber-500 disabled:opacity-60">{savingProduct ? 'Guardando…' : editingProduct ? 'Guardar cambios' : 'Crear producto'}</button></div>
+                <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="h-10 rounded-lg px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button><button disabled={savingProduct} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-semibold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingProduct ? 'Guardando…' : editingProduct ? 'Guardar cambios' : 'Crear producto'}</button></div>
               </form>
             </div>
           )}
-        </section>
-      </div>
+      </section>
+      <nav aria-label="Navegación principal móvil" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden">
+        {([
+          { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
+          { id: 'products', label: 'Catálogo', icon: Package },
+          { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+          { id: 'claims', label: 'Reclamos', icon: ClipboardList },
+        ] as const).map(({ id, label, icon: Icon }) => <button key={id} onClick={() => setView(id)} className={`grid min-h-14 place-items-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold ${view === id ? 'text-[#4169ff]' : 'text-slate-500'}`}><Icon size={19}/>{label}</button>)}
+      </nav>
     </main>
   );
 }
 function Stat({ value, label, tone = 'amber' }: { value: number | string; label: string; tone?: 'amber' | 'green' | 'gray' }) {
   const accents = {
-    amber: 'bg-amber-400',
-    green: 'bg-emerald-400',
-    gray: 'bg-stone-300',
+    amber: 'bg-[#4169ff]',
+    green: 'bg-emerald-500',
+    gray: 'bg-slate-300',
   };
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-      <span className={`absolute inset-x-0 top-0 h-1 ${accents[tone]}`} />
-      <strong className="block text-4xl font-black">{value}</strong>
-      <span className="mt-1 block text-sm text-stone-500">{label}</span>
+    <article className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+      <span className={`absolute inset-y-0 left-0 w-1 ${accents[tone]}`} />
+      <strong className="block text-3xl font-bold tracking-tight">{value}</strong>
+      <span className="mt-1 block text-sm text-slate-500">{label}</span>
     </article>
   );
 }
+function DashboardSkeleton() {
+  return <div className="animate-pulse"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-28 rounded-xl border border-slate-200 bg-white" />)}</div><div className="mt-6 h-56 rounded-xl border border-slate-200 bg-white" /></div>;
+}
 function Empty({ text }: { text: string }) {
   return (
-    <div className="rounded-2xl bg-white p-10 text-center text-stone-500 shadow-sm">{text}</div>
+    <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm shadow-slate-200/30">{text}</div>
   );
 }
 function Status({
@@ -587,7 +606,7 @@ function Status({
 }) {
   return (
     <select
-      className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-bold"
+      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none ring-[#4169ff] focus:ring-2"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
