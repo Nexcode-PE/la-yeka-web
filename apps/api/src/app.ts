@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { put } from '@vercel/blob'
 import { z } from 'zod'
 import { db } from '../../../packages/database/src/client.js'
 import { login, registerCustomer, requireAdmin, requireUser } from './auth.js'
@@ -62,6 +63,18 @@ const productUpdate = productInput.partial()
 app.post('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productInput.safeParse(await c.req.json()); if(!parsed.success) return c.json({error:'Revisa los datos del producto.'},400); return c.json(await db.product.create({data:parsed.data,include:{category:true}}),201) })
 app.patch('/admin/products/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productUpdate.safeParse(await c.req.json()); if(!parsed.success) return c.json({ error:'Datos inválidos' },400); const product=await db.product.update({ where:{id:c.req.param('id')},data:parsed.data }); return c.json(product) })
 app.delete('/admin/products/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); await db.product.delete({where:{id:c.req.param('id')}}); return c.body(null,204) })
+app.post('/admin/uploads', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error: 'No autorizado' }, 401)
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.VERCEL_OIDC_TOKEN) return c.json({ error: 'El almacenamiento de imágenes aún no está configurado.' }, 503)
+  const form = await c.req.parseBody()
+  const image = form.image
+  if (!(image instanceof File)) return c.json({ error: 'Selecciona una imagen para continuar.' }, 400)
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(image.type)) return c.json({ error: 'Usa una imagen JPG, PNG o WEBP.' }, 400)
+  if (image.size > 4 * 1024 * 1024) return c.json({ error: 'La imagen no puede superar los 4 MB.' }, 400)
+  const safeName = image.name.toLowerCase().replace(/[^a-z0-9._-]/g, '-') || 'producto'
+  const blob = await put(`products/${safeName}`, image, { access: 'public', addRandomSuffix: true })
+  return c.json({ url: blob.url }, 201)
+})
 app.post('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=z.object({name:z.string().trim().min(2).max(50)}).safeParse(await c.req.json()); if(!parsed.success)return c.json({error:'Nombre de categoría inválido'},400); const position=await db.category.count(); try { return c.json(await db.category.create({data:{name:parsed.data.name,position}}),201) } catch { return c.json({error:'La categoría ya existe.'},409) } })
 app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.order.findMany({ include:{items:true},orderBy:{createdAt:'desc'},take:100 })) })
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })

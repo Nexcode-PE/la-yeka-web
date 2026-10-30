@@ -7,16 +7,18 @@ import {
   ChevronRight,
   ExternalLink,
   Filter,
-  ImagePlus,
   LayoutDashboard,
   LogOut,
   Package,
   Plus,
+  Pencil,
   RefreshCw,
   Search,
   ShieldCheck,
   ShoppingBag,
   TriangleAlert,
+  Trash2,
+  Upload,
   UtensilsCrossed,
 } from 'lucide-react';
 import './styles.css';
@@ -28,7 +30,7 @@ type Product = {
   imagePath: string | null;
   price: string;
   isAvailable: boolean;
-  category: { name: string } | null;
+  category: { id: string; name: string } | null;
 };
 type Category = { id: string; name: string; position: number };
 type Order = {
@@ -93,9 +95,11 @@ function Admin() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'paused'>('all');
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
-  const [draftImages, setDraftImages] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productImage, setProductImage] = useState<File | null>(null);
+  const [savingProduct, setSavingProduct] = useState(false);
   const request = useCallback(
     async (path: string, init: RequestInit = {}) => {
       if (!api) throw new Error('Configura VITE_API_URL para conectar la administración.');
@@ -111,6 +115,7 @@ function Admin() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error || 'No se pudo completar la operación.');
       }
+      if (response.status === 204) return null;
       return response.json();
     },
     [token],
@@ -138,7 +143,6 @@ function Admin() {
   }, [load]);
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
-    setDraftImages(Object.fromEntries(products.map((product) => [product.id, product.imagePath || ''])));
   }, [products]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -196,17 +200,50 @@ function Admin() {
     { title: 'En cocina', statuses: ['CONFIRMED', 'PREPARING'], tone: 'border-orange-400' },
     { title: 'Listos / entrega', statuses: ['READY'], tone: 'border-emerald-400' },
   ].map((column) => ({ ...column, orders: orders.filter((order) => column.statuses.includes(order.status)) })), [orders]);
-  const createProduct = async (event: FormEvent<HTMLFormElement>) => {
+  const uploadProductImage = async (file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    const response = await fetch(`${api}/api/admin/uploads`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || 'No se pudo subir la imagen.');
+    }
+    return response.json() as Promise<{ url: string }>;
+  };
+  const saveProduct = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
+    setSavingProduct(true); setError('');
     try {
-      await request('/admin/products', { method: 'POST', body: JSON.stringify({
+      const data = {
         name: fields.get('name'), description: fields.get('description') || null,
         price: Number(fields.get('price')), categoryId: fields.get('categoryId') || null,
-        imagePath: fields.get('imagePath') || null, isAvailable: true,
-      }) });
-      setShowProductForm(false); await load();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo crear el producto.'); }
+        isAvailable: fields.get('isAvailable') === 'on',
+      };
+      const product = editingProduct
+        ? await request(`/admin/products/${editingProduct.id}`, { method: 'PATCH', body: JSON.stringify(data) })
+        : await request('/admin/products', { method: 'POST', body: JSON.stringify(data) });
+      if (productImage) {
+        const { url } = await uploadProductImage(productImage);
+        await request(`/admin/products/${product.id}`, { method: 'PATCH', body: JSON.stringify({ imagePath: url }) });
+      }
+      setShowProductForm(false); setEditingProduct(null); setProductImage(null); await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar el producto.'); }
+    finally { setSavingProduct(false); }
+  };
+  const deleteProduct = async (product: Product) => {
+    if (!window.confirm(`¿Eliminar “${product.name}”? Esta acción no se puede deshacer.`)) return;
+    setSavingId(product.id); setError('');
+    try { await request(`/admin/products/${product.id}`, { method: 'DELETE' }); await load(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo eliminar el producto.'); }
+    finally { setSavingId(''); }
+  };
+  const openProductForm = (product: Product | null = null) => {
+    setEditingProduct(product); setProductImage(null); setShowProductForm(true);
   };
   const openWhatsApp = (order: Order) => {
     const phone = order.customerPhone?.replace(/\D/g, '');
@@ -358,7 +395,7 @@ function Admin() {
           )}
           {view === 'products' && (
             <>
-              <div className="mb-5 flex justify-end"><button onClick={() => setShowProductForm(true)} className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-stone-950 hover:bg-amber-500"><Plus size={17}/> Nuevo producto</button></div>
+              <div className="mb-5 flex justify-end"><button onClick={() => openProductForm()} className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-stone-950 hover:bg-amber-500"><Plus size={17}/> Nuevo producto</button></div>
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <Stat value={products.length} label="Productos registrados" />
                 <Stat value={available} label="A la venta" tone="green" />
@@ -383,12 +420,12 @@ function Admin() {
                 </select>
               </div>
               <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-                <div className="hidden grid-cols-[5rem_minmax(0,1fr)_11rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
-                  <span>IMAGEN</span><span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span>
+                <div className="hidden grid-cols-[5rem_minmax(0,1fr)_11rem_10rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
+                  <span>IMAGEN</span><span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span><span>ACCIONES</span>
                 </div>
                 {filteredProducts.map((product) => (
                   <article
-                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[5rem_minmax(0,1fr)_11rem_10rem] md:items-center"
+                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[5rem_minmax(0,1fr)_11rem_10rem_10rem] md:items-center"
                     key={product.id}
                   >
                     <div className="grid size-16 place-items-center overflow-hidden rounded-xl bg-stone-100 text-stone-400">
@@ -399,7 +436,6 @@ function Admin() {
                       <p className="mt-1 text-sm text-stone-500">
                         <span className="font-semibold text-amber-700">{product.category?.name || 'Sin categoría'}</span> · {product.description || 'Sin descripción'}
                       </p>
-                      <details className="mt-2 text-xs"><summary className="inline-flex cursor-pointer items-center gap-1 font-bold text-amber-700"><ImagePlus size={14}/> Agregar o cambiar imagen</summary><div className="mt-2 flex max-w-md gap-2"><input type="url" value={draftImages[product.id] ?? ''} onChange={(event) => setDraftImages((current) => ({ ...current, [product.id]: event.target.value }))} placeholder="https://…" className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 outline-none focus:border-amber-400" />{(draftImages[product.id] ?? '') !== (product.imagePath || '') && <button onClick={() => update('products', product.id, { imagePath: draftImages[product.id] || null })} className="rounded-lg bg-amber-400 px-2 py-1.5 font-black text-stone-950">Guardar</button>}</div></details>
                     </div>
                     <div className="flex items-center gap-2">
                       <CircleDollarSign size={17} className="text-stone-500" />
@@ -422,6 +458,10 @@ function Admin() {
                     >
                       {product.isAvailable ? 'Disponible' : 'Pausado'}
                     </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => openProductForm(product)} className="inline-flex items-center gap-1 rounded-lg border border-stone-300 px-2.5 py-2 text-xs font-bold hover:border-amber-400 hover:bg-amber-50"><Pencil size={14}/> Editar</button>
+                      <button onClick={() => deleteProduct(product)} disabled={savingId === product.id} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 size={14}/> Eliminar</button>
+                    </div>
                   </article>
                 ))}
                 {filteredProducts.length === 0 && <Empty text="No encontramos productos con esos filtros." />}
@@ -495,16 +535,20 @@ function Admin() {
           )}
           {showProductForm && (
             <div className="fixed inset-0 z-50 grid place-items-center bg-stone-950/60 p-4">
-              <form onSubmit={createProduct} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-                <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black tracking-[0.18em] text-amber-700">CATÁLOGO</p><h3 className="mt-1 text-2xl font-black">Nuevo producto</h3></div><button type="button" onClick={() => setShowProductForm(false)} className="rounded-lg px-3 py-2 text-sm font-bold text-stone-500 hover:bg-stone-100">Cerrar</button></div>
+              <form key={editingProduct?.id || 'new'} onSubmit={saveProduct} className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+                <div className="flex items-start justify-between gap-4"><div><p className="text-xs font-black tracking-[0.18em] text-amber-700">CATÁLOGO</p><h3 className="mt-1 text-2xl font-black">{editingProduct ? 'Editar producto' : 'Nuevo producto'}</h3></div><button type="button" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="rounded-lg px-3 py-2 text-sm font-bold text-stone-500 hover:bg-stone-100">Cerrar</button></div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Nombre<input name="name" required minLength={2} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
-                  <label className="grid gap-1 text-sm font-bold">Precio (S/)<input name="price" required type="number" min="0.1" step="0.1" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
-                  <label className="grid gap-1 text-sm font-bold">Categoría<select name="categoryId" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400"><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Descripción<textarea name="description" rows={3} className="resize-none rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
-                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">URL de imagen (opcional)<input name="imagePath" type="url" placeholder="https://…" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Nombre<input name="name" defaultValue={editingProduct?.name} required minLength={2} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold">Precio (S/)<input name="price" defaultValue={editingProduct?.price} required type="number" min="0.1" step="0.1" className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-1 text-sm font-bold">Categoría<select name="categoryId" defaultValue={editingProduct?.category?.id || ''} className="rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400"><option value="">Sin categoría</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+                  <label className="grid gap-1 text-sm font-bold sm:col-span-2">Descripción<textarea name="description" defaultValue={editingProduct?.description || ''} rows={3} className="resize-none rounded-xl border border-stone-300 px-3 py-2.5 font-normal outline-none focus:border-amber-400" /></label>
+                  <label className="grid gap-2 text-sm font-bold sm:col-span-2">Imagen del producto
+                    <span className="flex items-center gap-3 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-3 font-normal text-stone-600"><Upload size={18} className="text-amber-700"/><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setProductImage(event.target.files?.[0] || null)} className="min-w-0 text-sm" /></span>
+                    <span className="text-xs font-normal text-stone-500">JPG, PNG o WEBP; máximo 4 MB. {productImage ? `Seleccionada: ${productImage.name}` : editingProduct?.imagePath ? 'Conservará la imagen actual si no eliges otra.' : 'Si no cargas una, se mostrará el ícono predeterminado.'}</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-bold sm:col-span-2"><input name="isAvailable" type="checkbox" defaultChecked={editingProduct ? editingProduct.isAvailable : true} className="size-4 accent-amber-500" /> Disponible para la venta</label>
                 </div>
-                <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={() => setShowProductForm(false)} className="rounded-xl px-4 py-3 text-sm font-bold hover:bg-stone-100">Cancelar</button><button className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black hover:bg-amber-500">Crear producto</button></div>
+                <div className="mt-7 flex justify-end gap-3"><button type="button" onClick={() => { setShowProductForm(false); setEditingProduct(null); }} className="rounded-xl px-4 py-3 text-sm font-bold hover:bg-stone-100">Cancelar</button><button disabled={savingProduct} className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black hover:bg-amber-500 disabled:opacity-60">{savingProduct ? 'Guardando…' : editingProduct ? 'Guardar cambios' : 'Crear producto'}</button></div>
               </form>
             </div>
           )}
