@@ -310,19 +310,19 @@ function Admin() {
     );
   return (
     <main className="h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 text-slate-950 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-black bg-black text-white shadow-sm">
         <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-4">
-            <button aria-label="Abrir navegación" onClick={() => setSidebarOpen(true)} className="grid size-10 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 xl:hidden"><Menu size={21}/></button>
-            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-950 px-1 sm:flex">
+            <button aria-label="Abrir navegación" onClick={() => setSidebarOpen(true)} className="grid size-10 place-items-center rounded-lg text-slate-300 hover:bg-white/10 xl:hidden"><Menu size={21}/></button>
+            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white/5 px-1 sm:flex">
               <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
             </div>
             <div>
               <p className="text-[10px] font-bold tracking-[0.16em] text-[#4169ff] sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
-              <h1 className="mt-0.5 text-sm font-bold sm:text-base">Hola, {user}</h1>
+              <h1 className="mt-0.5 text-sm font-bold text-white sm:text-base">Hola, {user}</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2"><button aria-label="Notificaciones" title="No hay notificaciones" className="grid size-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><Bell size={19}/></button><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold hover:border-slate-300 hover:bg-slate-50"><LogOut size={16} /><span className="hidden sm:inline">Salir</span></button></div>
+          <div className="flex items-center gap-2"><button aria-label="Notificaciones" title="No hay notificaciones" className="grid size-10 place-items-center rounded-lg text-slate-300 hover:bg-white/10"><Bell size={19}/></button><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-sm font-semibold text-white hover:bg-white hover:text-slate-950"><LogOut size={16} /><span className="hidden sm:inline">Salir</span></button></div>
         </div>
       </header>
       {sidebarOpen && <button aria-label="Cerrar navegación" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden" />}
@@ -354,7 +354,7 @@ function Admin() {
             ))}
           </nav>
       </aside>
-      <section className={`flex h-[calc(100dvh-4rem)] min-w-0 flex-col px-4 pb-24 pt-6 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
+      <section className={`flex h-[calc(100dvh-4rem)] min-w-0 flex-col px-4 pb-24 pt-4 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
           {error && (
             <p role="alert" className="mb-5 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
               <TriangleAlert size={18} />
@@ -362,10 +362,10 @@ function Admin() {
             </p>
           )}
           {notice && <div role="status" className="mb-5 flex items-center justify-between rounded-xl border border-blue-100 bg-[#eef2ff] px-4 py-3 text-sm font-medium text-[#3156d8]"><span>{notice}</span><button aria-label="Cerrar aviso" onClick={() => setNotice('')} className="rounded p-1 hover:bg-white"><X size={16}/></button></div>}
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">OPERACIÓN</p>
-              <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+              <h2 className="mt-0.5 text-2xl font-bold tracking-tight">
                 {view === 'products'
                   ? 'Catálogo'
                   : view === 'dashboard'
@@ -375,13 +375,10 @@ function Admin() {
                     : 'Libro de reclamaciones'}
               </h2>
             </div>
-            <button
-              onClick={load}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait"
-            >
+            <div className="flex items-center gap-2"><button onClick={load} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-wait">
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
               {loading ? 'Actualizando…' : 'Actualizar datos'}
-            </button>
+            </button>{view === 'products' && <button onClick={() => openProductForm()} className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#4169ff] px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"><Plus size={16}/> Nuevo producto</button>}</div>
           </div>
           {loading && !dashboard && view === 'dashboard' && <DashboardSkeleton />}
           {view === 'dashboard' && dashboard && !loading && (
@@ -404,13 +401,12 @@ function Admin() {
           )}
           {view === 'products' && (
             <div className="flex min-h-0 flex-1 flex-col">
-              <div className="mb-5 flex justify-end"><button onClick={() => openProductForm()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"><Plus size={17}/> Nuevo producto</button></div>
-              <div className="mb-6 grid gap-4 sm:grid-cols-3">
-                <Stat value={products.length} label="Productos registrados" />
-                <Stat value={available} label="A la venta" tone="green" />
-                <Stat value={products.length - available} label="Pausados" tone="gray" />
+              <div className="mb-3 grid gap-3 sm:grid-cols-3">
+                <Stat compact value={products.length} label="Productos registrados" />
+                <Stat compact value={available} label="A la venta" tone="green" />
+                <Stat compact value={products.length - available} label="Pausados" tone="gray" />
               </div>
-              <div className="mb-5 grid gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+              <div className="mb-3 grid gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm shadow-slate-200/30 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
                 <label className="relative block">
                   <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
                   <input value={productQuery} onChange={(event) => setProductQuery(event.target.value)} className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-amber-400 focus:bg-white" placeholder="Buscar por producto o ingrediente" />
@@ -568,17 +564,17 @@ function Admin() {
     </main>
   );
 }
-function Stat({ value, label, tone = 'amber' }: { value: number | string; label: string; tone?: 'amber' | 'green' | 'gray' }) {
+function Stat({ value, label, tone = 'amber', compact = false }: { value: number | string; label: string; tone?: 'amber' | 'green' | 'gray'; compact?: boolean }) {
   const accents = {
     amber: 'bg-[#4169ff]',
     green: 'bg-emerald-500',
     gray: 'bg-slate-300',
   };
   return (
-    <article className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+    <article className={`relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30 ${compact ? 'p-3' : 'p-5'}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${accents[tone]}`} />
-      <strong className="block text-3xl font-bold tracking-tight">{value}</strong>
-      <span className="mt-1 block text-sm text-slate-500">{label}</span>
+      <strong className={`block font-bold tracking-tight ${compact ? 'text-2xl' : 'text-3xl'}`}>{value}</strong>
+      <span className={`block text-slate-500 ${compact ? 'mt-0.5 text-xs' : 'mt-1 text-sm'}`}>{label}</span>
     </article>
   );
 }
