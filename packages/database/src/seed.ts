@@ -5,7 +5,7 @@ import { db } from './client'
 import argon2 from 'argon2'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../')
-const source = readFileSync(resolve(root, 'apps/client/src/main.tsx'), 'utf8')
+const source = readFileSync(process.env.CATALOG_SOURCE || resolve(root, 'apps/client/src/main.tsx'), 'utf8')
 // Admite también las entradas legibles que ocupan varias líneas en el catálogo.
 const pattern = /\[\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(\d+)\s*,\s*'([^']+)'(?:\s*,\s*'([^']+)')?\s*,?\s*\]/g
 const entries = [...source.matchAll(pattern)].map(([, name, description, price, category, tag]) => ({ name, description, price: Number(price), category, tag }))
