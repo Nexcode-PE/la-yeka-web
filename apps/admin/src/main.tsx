@@ -310,23 +310,24 @@ function Admin() {
     );
   return (
     <main className="h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
-      <header className="sticky top-0 z-40 border-b border-black bg-black text-white shadow-sm">
-        <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
+      <header className="sticky top-0 z-40 border-b border-amber-400/35 bg-[#101010] text-white shadow-[0_5px_18px_rgba(0,0,0,0.22)]">
+        <div className="relative flex h-[68px] w-full items-center justify-between gap-3 px-4 sm:px-6">
+          <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-amber-400/70 via-amber-200/20 to-transparent" />
           <div className="flex items-center gap-3 sm:gap-4">
             <button aria-label="Abrir navegación" onClick={() => setSidebarOpen(true)} className="grid size-10 place-items-center rounded-lg text-slate-300 hover:bg-white/10 xl:hidden"><Menu size={21}/></button>
-            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-white/5 px-1 sm:flex">
+            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-xl border border-amber-400/30 bg-[#1d1d1d] px-1 shadow-inner shadow-black/40 sm:flex">
               <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
             </div>
             <div>
-              <p className="text-[10px] font-bold tracking-[0.16em] text-[#4169ff] sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
-              <h1 className="mt-0.5 text-sm font-bold text-white sm:text-base">Hola, {user}</h1>
+              <p className="text-[10px] font-bold tracking-[0.18em] text-amber-300 sm:text-xs">LA YEKA · ADMINISTRACIÓN</p>
+              <h1 className="mt-0.5 text-sm font-semibold text-white sm:text-[15px]">Hola, {user}</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2"><button aria-label="Notificaciones" title="No hay notificaciones" className="grid size-10 place-items-center rounded-lg text-slate-300 hover:bg-white/10"><Bell size={19}/></button><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/20 px-3 text-sm font-semibold text-white hover:bg-white hover:text-slate-950"><LogOut size={16} /><span className="hidden sm:inline">Salir</span></button></div>
+          <div className="flex items-center gap-2"><button aria-label="Notificaciones" title="No hay notificaciones" className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-200 transition hover:border-amber-300/40 hover:bg-amber-400/10"><Bell size={18}/></button><button onClick={logout} className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-400/45 bg-amber-400 px-3 text-sm font-bold text-stone-950 transition hover:bg-amber-300"><LogOut size={16} /><span className="hidden sm:inline">Salir</span></button></div>
         </div>
       </header>
       {sidebarOpen && <button aria-label="Cerrar navegación" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden" />}
-      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-200 xl:top-16 xl:z-30 xl:h-[calc(100vh-4rem)] xl:translate-x-0 xl:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCompact ? 'xl:w-20' : 'xl:w-60'}`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-200 xl:top-[68px] xl:z-30 xl:h-[calc(100vh-68px)] xl:translate-x-0 xl:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCompact ? 'xl:w-20' : 'xl:w-60'}`}>
           <div className="mb-6 flex items-center justify-between px-2 xl:hidden"><img src={brandLogo} alt="La Yeka" className="h-10 w-auto"/><button aria-label="Cerrar navegación" onClick={() => setSidebarOpen(false)} className="grid size-9 place-items-center rounded-lg hover:bg-slate-100"><X size={20}/></button></div>
           <div className="mb-4 hidden items-center justify-between px-2 xl:flex">
             {!sidebarCompact && <p className="text-[11px] font-bold tracking-[0.14em] text-slate-400">OPERACIÓN</p>}
@@ -354,7 +355,7 @@ function Admin() {
             ))}
           </nav>
       </aside>
-      <section className={`flex h-[calc(100dvh-4rem)] min-w-0 flex-col px-4 pb-24 pt-4 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
+      <section className={`flex h-[calc(100dvh-68px)] min-w-0 flex-col px-4 pb-24 pt-4 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
           {error && (
             <p role="alert" className="mb-5 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
               <TriangleAlert size={18} />
