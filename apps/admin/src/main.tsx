@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ExternalLink,
   Filter,
+  ImagePlus,
   LayoutDashboard,
   LogOut,
   Package,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   TriangleAlert,
+  UtensilsCrossed,
 } from 'lucide-react';
 import './styles.css';
 
@@ -23,6 +25,7 @@ type Product = {
   id: string;
   name: string;
   description: string | null;
+  imagePath: string | null;
   price: string;
   isAvailable: boolean;
   category: { name: string } | null;
@@ -90,6 +93,7 @@ function Admin() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'paused'>('all');
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [draftImages, setDraftImages] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const request = useCallback(
@@ -134,6 +138,7 @@ function Admin() {
   }, [load]);
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
+    setDraftImages(Object.fromEntries(products.map((product) => [product.id, product.imagePath || ''])));
   }, [products]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -378,19 +383,23 @@ function Admin() {
                 </select>
               </div>
               <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-                <div className="hidden grid-cols-[minmax(0,1fr)_11rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
-                  <span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span>
+                <div className="hidden grid-cols-[5rem_minmax(0,1fr)_11rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
+                  <span>IMAGEN</span><span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span>
                 </div>
                 {filteredProducts.map((product) => (
                   <article
-                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[minmax(0,1fr)_11rem_10rem] md:items-center"
+                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[5rem_minmax(0,1fr)_11rem_10rem] md:items-center"
                     key={product.id}
                   >
+                    <div className="grid size-16 place-items-center overflow-hidden rounded-xl bg-stone-100 text-stone-400">
+                      {product.imagePath ? <img src={product.imagePath} alt="" className="size-full object-cover" /> : <UtensilsCrossed size={24} />}
+                    </div>
                     <div>
                       <p className="font-black">{product.name}</p>
                       <p className="mt-1 text-sm text-stone-500">
                         <span className="font-semibold text-amber-700">{product.category?.name || 'Sin categoría'}</span> · {product.description || 'Sin descripción'}
                       </p>
+                      <details className="mt-2 text-xs"><summary className="inline-flex cursor-pointer items-center gap-1 font-bold text-amber-700"><ImagePlus size={14}/> Agregar o cambiar imagen</summary><div className="mt-2 flex max-w-md gap-2"><input type="url" value={draftImages[product.id] ?? ''} onChange={(event) => setDraftImages((current) => ({ ...current, [product.id]: event.target.value }))} placeholder="https://…" className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 outline-none focus:border-amber-400" />{(draftImages[product.id] ?? '') !== (product.imagePath || '') && <button onClick={() => update('products', product.id, { imagePath: draftImages[product.id] || null })} className="rounded-lg bg-amber-400 px-2 py-1.5 font-black text-stone-950">Guardar</button>}</div></details>
                     </div>
                     <div className="flex items-center gap-2">
                       <CircleDollarSign size={17} className="text-stone-500" />

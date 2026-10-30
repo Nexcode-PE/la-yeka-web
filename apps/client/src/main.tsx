@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
 
-type Product = { id?: string; name: string; detail: string; price: number; category: string; tag?: string };
+type Product = { id?: string; name: string; detail: string; price: number; category: string; tag?: string; imagePath?: string | null };
 type CartItem = Product & { qty: number };
 type OrderHistory = { id: string; total: string; status: string; createdAt: string; items: Array<{ productName: string; quantity: number }> };
 
@@ -20,12 +20,7 @@ const money = (n: number) => `S/ ${n.toFixed(2)}`;
 const wa = import.meta.env.VITE_WHATSAPP_NUMBER || '51974121550';
 // En producción, la API se publica en el mismo dominio bajo /api.
 const apiBase = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
-const productVisual = (product: Product) => {
-  if (product.category === 'Salchipapas') return '/images/salchipapas-3d.png';
-  if (product.name === 'Coca-Cola 500 ml') return '/images/coca-cola-500ml.png';
-  if (product.name === 'Inca Kola 500 ml') return '/images/inca-kola-500ml.png';
-  return '/images/burger-3d.png';
-};
+const productVisual = (product: Product) => product.imagePath || null;
 
 function App() {
   const [catalog, setCatalog] = useState<Product[]>([]);
@@ -57,7 +52,7 @@ function App() {
     fetch(base + '/api/catalog')
       .then((response) => { if (!response.ok) throw new Error(); return response.json(); })
       .then((categories) => {
-        const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, tag: product.isFeatured ? 'Favorita' : undefined })));
+        const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; imagePath?:string | null; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, imagePath: product.imagePath, tag: product.isFeatured ? 'Favorita' : undefined })));
         setCatalog(next); setCatalogState('ready');
       })
       .catch(() => setCatalogState('error'));
@@ -212,7 +207,7 @@ function App() {
           <div className="featured-grid">
             {topPicks.map((p) => (
               <article key={p.name} className="featured-card">
-                <img src={productVisual(p)} alt={`${p.name}, presentación referencial`} />
+                {productVisual(p) ? <img src={productVisual(p)!} alt={p.name} /> : <div className="grid h-44 place-items-center bg-amber-50 text-amber-600"><UtensilsCrossed size={42} /></div>}
                 <div>
                   <h3>{p.name}</h3>
                   <p>{p.detail}</p>
@@ -259,11 +254,7 @@ function App() {
               <article className={'product p' + (i % 5)} key={p.name}>
                 {p.tag && <label>{p.tag}</label>}
                 <div className={`product-art ${p.category === 'Bebidas' ? 'drink-art' : ''}`}>
-                  {productVisual(p) ? (
-                    <img src={productVisual(p)!} alt={`${p.name}, presentación referencial`} />
-                  ) : (
-                    <span aria-label="Producto">🍔</span>
-                  )}
+                  {productVisual(p) ? <img src={productVisual(p)!} alt={p.name} /> : <UtensilsCrossed size={42} aria-label="Producto sin imagen" />}
                 </div>
                 <div className="product-info">
                   <div>
