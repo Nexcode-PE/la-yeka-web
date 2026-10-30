@@ -309,7 +309,7 @@ function Admin() {
       </main>
     );
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f7f8fc] font-sans text-slate-950">
+    <main className="h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 text-slate-950 backdrop-blur">
         <div className="flex h-16 w-full items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-4">
@@ -354,7 +354,7 @@ function Admin() {
             ))}
           </nav>
       </aside>
-      <section className={`min-w-0 px-4 pb-24 pt-6 sm:px-6 lg:px-8 xl:pb-8 ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
+      <section className={`flex h-[calc(100dvh-4rem)] min-w-0 flex-col px-4 pb-24 pt-6 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}>
           {error && (
             <p role="alert" className="mb-5 flex items-center gap-2 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
               <TriangleAlert size={18} />
@@ -403,7 +403,7 @@ function Admin() {
             </>
           )}
           {view === 'products' && (
-            <>
+            <div className="flex min-h-0 flex-1 flex-col">
               <div className="mb-5 flex justify-end"><button onClick={() => openProductForm()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"><Plus size={17}/> Nuevo producto</button></div>
               <div className="mb-6 grid gap-4 sm:grid-cols-3">
                 <Stat value={products.length} label="Productos registrados" />
@@ -428,54 +428,49 @@ function Admin() {
                   <option value="paused">Pausados</option>
                 </select>
               </div>
-              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
-                <div className="hidden grid-cols-[5rem_minmax(0,1fr)_11rem_10rem_10rem] gap-4 border-b border-stone-200 bg-stone-50 px-5 py-3 text-xs font-black tracking-[0.13em] text-stone-400 md:grid">
-                  <span>IMAGEN</span><span>PRODUCTO</span><span>PRECIO</span><span>ESTADO</span><span>ACCIONES</span>
-                </div>
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 sm:p-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(205px,1fr))] gap-4">
                 {filteredProducts.map((product) => (
                   <article
-                    className="grid gap-4 border-b border-stone-100 p-5 transition last:border-0 hover:bg-amber-50/30 md:grid-cols-[5rem_minmax(0,1fr)_11rem_10rem_10rem] md:items-center"
+                    className="group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
                     key={product.id}
                   >
-                    <div className="grid size-16 place-items-center overflow-hidden rounded-xl bg-stone-100 text-stone-400">
-                      {product.imagePath ? <img src={product.imagePath} alt="" className="size-full object-cover" /> : <UtensilsCrossed size={24} />}
+                    <div className="relative grid aspect-[1.35/0.9] place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
+                      {product.imagePath ? <img src={product.imagePath} alt={product.name} className="size-full object-cover transition duration-200 group-hover:scale-[1.03]" /> : <UtensilsCrossed size={30} />}
+                      <span className={`absolute right-2 top-2 rounded-full px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{product.isAvailable ? 'Disponible' : 'Pausado'}</span>
                     </div>
-                    <div>
-                      <p className="font-black">{product.name}</p>
-                      <p className="mt-1 text-sm text-stone-500">
-                        <span className="font-semibold text-amber-700">{product.category?.name || 'Sin categoría'}</span> · {product.description || 'Sin descripción'}
+                    <div className="px-1 pb-1 pt-3">
+                      <p className="truncate text-sm font-bold text-slate-950">{product.name}</p>
+                      <p className="mt-1 line-clamp-2 min-h-9 text-xs leading-4 text-slate-500">
+                        <span className="font-semibold text-[#4169ff]">{product.category?.name || 'Sin categoría'}</span>{product.description ? ` · ${product.description}` : ''}
                       </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CircleDollarSign size={17} className="text-stone-500" />
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="text-base font-bold text-slate-950">S/ {Number(product.price).toFixed(2)}</span>
+                        <button onClick={() => update('products', product.id, { isAvailable: !product.isAvailable })} disabled={savingId === product.id} className={`rounded-md px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{product.isAvailable ? 'Pausar' : 'Activar'}</button>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
                       <input
-                        className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-2 text-sm font-bold outline-none focus:border-amber-400"
+                        aria-label={`Precio de ${product.name}`}
+                        className="h-8 min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-semibold outline-none ring-[#4169ff] focus:bg-white focus:ring-2"
                         type="number"
                         min="0.1"
                         step="0.1"
                         value={draftPrices[product.id] ?? product.price}
                         onChange={(event) => setDraftPrices((current) => ({ ...current, [product.id]: event.target.value }))}
                       />
-                      {Number(draftPrices[product.id] ?? product.price) !== Number(product.price) && <button onClick={() => update('products', product.id, { price: Number(draftPrices[product.id]) })} disabled={savingId === product.id} className="rounded-lg bg-amber-400 px-2.5 py-2 text-xs font-black text-stone-950 hover:bg-amber-500">Guardar</button>}
-                    </div>
-                    <button
-                      onClick={() =>
-                        update('products', product.id, { isAvailable: !product.isAvailable })
-                      }
-                      disabled={savingId === product.id}
-                      className={`rounded-xl px-3 py-2 text-sm font-bold transition ${product.isAvailable ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-stone-200 text-stone-600 hover:bg-stone-300'}`}
-                    >
-                      {product.isAvailable ? 'Disponible' : 'Pausado'}
-                    </button>
-                    <div className="flex gap-2">
-                      <button onClick={() => openProductForm(product)} className="inline-flex items-center gap-1 rounded-lg border border-stone-300 px-2.5 py-2 text-xs font-bold hover:border-amber-400 hover:bg-amber-50"><Pencil size={14}/> Editar</button>
-                      <button onClick={() => deleteProduct(product)} disabled={savingId === product.id} className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-2 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 size={14}/> Eliminar</button>
+                      {Number(draftPrices[product.id] ?? product.price) !== Number(product.price) && <button title="Guardar precio" onClick={() => update('products', product.id, { price: Number(draftPrices[product.id]) })} disabled={savingId === product.id} className="h-8 rounded-md bg-[#4169ff] px-2 text-xs font-semibold text-white hover:bg-[#3156d8]">Guardar</button>}
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button onClick={() => openProductForm(product)} className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#aebdff] hover:bg-[#eef2ff]"><Pencil size={13}/> Editar</button>
+                        <button onClick={() => deleteProduct(product)} disabled={savingId === product.id} className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"><Trash2 size={13}/> Eliminar</button>
+                      </div>
                     </div>
                   </article>
                 ))}
+                </div>
                 {filteredProducts.length === 0 && <Empty text="No encontramos productos con esos filtros." />}
               </div>
-            </>
+            </div>
           )}
           {view === 'orders' && (
             <div className="grid gap-4 xl:grid-cols-3">
