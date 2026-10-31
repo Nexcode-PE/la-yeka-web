@@ -2,25 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
-
-type Product = { id?: string; name: string; detail: string; price: number; category: string; tag?: string; imagePath?: string | null };
-type CartItem = Product & { qty: number };
-type OrderHistory = { id: string; total: string; status: string; createdAt: string; items: Array<{ productName: string; quantity: number }> };
-
-const extras = [
-  { name: 'Jamón', price: 2 },
-  { name: 'Queso', price: 3 },
-  { name: 'Huevo', price: 3 },
-  { name: 'Tocino', price: 3 },
-  { name: 'Plátano', price: 3 },
-  { name: 'Piña', price: 3 },
-];
-const featuredNames = ['La Yekaburger Full', 'La Mixta Full', 'Fileteada Hawaiana', 'Salchiyeka Full'];
-const money = (n: number) => `S/ ${n.toFixed(2)}`;
-const wa = import.meta.env.VITE_WHATSAPP_NUMBER || '51974121550';
-// En producción, la API se publica en el mismo dominio bajo /api.
-const apiBase = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
-const productVisual = (product: Product) => product.imagePath || null;
+import { apiBase, extras, featuredNames, money, productVisual, whatsappNumber as wa } from './lib/client-config';
+import type { CartItem, OrderHistory, Product } from './types/catalog';
 
 function App() {
   const [catalog, setCatalog] = useState<Product[]>([]);
