@@ -210,7 +210,7 @@ function App() {
         </nav>
         <div className="header-actions flex items-center gap-2">
           <button className="account-button" onClick={() => { setAuthError(''); setDialog('account'); }}>
-            {accountName ? <><UserRound size={17} /><span>{accountName.split(' ')[0]}</span></> : <><LogIn size={17} /><span>Iniciar sesión</span></>}
+            {accountName ? <><UserRound size={17} /><span>{accountName}</span></> : <><LogIn size={17} /><span>Iniciar sesión</span></>}
           </button>
           <button ref={cartButtonRef} className={`cart-button ${cartPulse ? 'cart-pulse' : ''}`} onClick={() => setOpen(true)}>
             <ShoppingBag size={18} />
