@@ -112,6 +112,13 @@
   .empty h3 { @apply mb-0 text-xl font-extrabold text-yeka-ink; }
   .empty p { @apply mb-2 text-sm; }
   .cart-items { @apply grid divide-y divide-stone-200; }
+  .cart-extras { @apply mt-5 border-y border-stone-200 py-5; }
+  .cart-extras .eyebrow { @apply mb-2 text-[9px]; }
+  .cart-extras h3 { @apply mb-1 text-sm font-extrabold; }
+  .cart-extras p:last-child { @apply mb-3 text-[11px] text-stone-500; }
+  .cart-extra-list { @apply grid grid-cols-2 gap-2; }
+  .cart-extra-list button { @apply grid min-h-11 grid-cols-[1fr_auto_auto] items-center gap-1 rounded border border-stone-200 bg-stone-50 px-2.5 text-left text-[11px] font-bold transition hover:border-yeka-gold hover:bg-[#fff7e8]; }
+  .cart-extra-list b { @apply font-mono text-[10px] text-yeka-gold-dark; }
   .cart-item { @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 py-4; }
   .cart-item h3 { @apply mb-1 text-sm font-extrabold; }
   .cart-item p { @apply mb-0 text-xs text-stone-500; }

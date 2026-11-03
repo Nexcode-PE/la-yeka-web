@@ -139,7 +139,6 @@ function App() {
         </a>
         <nav className="hidden gap-8 text-white md:flex">
           <a href="#carta">Carta</a>
-          <a href="#extras">Complementos</a>
           <a href="#nosotros">Nosotros</a>
         </nav>
         <div className="header-actions flex items-center gap-2">
@@ -273,25 +272,6 @@ function App() {
             {catalogState === 'ready' && shown.length === 0 && <p className="col-span-full py-12 text-center text-stone-500">Por ahora no hay productos disponibles en esta categoría.</p>}
           </div>
         </section>
-        <section className="extras" id="extras">
-          <div>
-            <p className="eyebrow">HAZLO MÁS YEKA</p>
-            <h2>Complementos</h2>
-            <p>Agrégale lo que quieras. Porque más queso nunca fue mala idea.</p>
-          </div>
-          <div className="extra-list">
-            {extras.map((x) => (
-              <button
-                key={x.name}
-                onClick={() => add({ ...x, detail: 'Extra para tu pedido', category: 'Complemento' })}
-              >
-                <span>{x.name}</span>
-                <b>+ {money(x.price)}</b>
-                <Plus size={17} />
-              </button>
-            ))}
-          </div>
-        </section>
         <section className="location-section">
           <div className="location-copy">
             <p className="eyebrow">VISÍTANOS</p>
@@ -409,6 +389,7 @@ function App() {
                 <button className="primary" onClick={() => setOpen(false)}>
                   Ver la carta
                 </button>
+                <ExtrasPicker onAdd={(extra) => add({ ...extra, detail: 'Extra para tu pedido', category: 'Complemento' })} />
               </div>
             ) : (
               <>
@@ -439,6 +420,7 @@ function App() {
                     </div>
                   ))}
                 </div>
+                <ExtrasPicker onAdd={(extra) => add({ ...extra, detail: 'Extra para tu pedido', category: 'Complemento' })} />
                 <input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" />
                 <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" />
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -651,5 +633,9 @@ function App() {
       )}
     </>
   );
+}
+
+function ExtrasPicker({ onAdd }: { onAdd: (extra: { name: string; price: number }) => void }) {
+  return <section className="cart-extras"><div><p className="eyebrow">HAZLO MÁS YEKA</p><h3>Agrega complementos</h3><p>Personaliza tu pedido antes de enviarlo.</p></div><div className="cart-extra-list">{extras.map((extra) => <button key={extra.name} onClick={() => onAdd(extra)}><span>{extra.name}</span><b>+ {money(extra.price)}</b><Plus size={15} /></button>)}</div></section>;
 }
 createRoot(document.getElementById('root')!).render(<App />);
