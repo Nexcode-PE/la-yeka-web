@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
@@ -76,7 +76,35 @@ function Admin() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [notice, setNotice] = useState('');
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+  const knownOrderIds = useRef<Set<string> | null>(null);
+  const notificationAudio = useRef<AudioContext | null>(null);
   const request = useAdminRequest(token);
+  const prepareNotificationSound = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const context = notificationAudio.current ?? new AudioContext();
+    notificationAudio.current = context;
+    if (context.state === 'suspended') void context.resume().catch(() => undefined);
+  }, []);
+  const playNewOrderSound = useCallback(() => {
+    prepareNotificationSound();
+    const context = notificationAudio.current;
+    if (!context) return;
+    const play = () => {
+      const now = context.currentTime;
+      [660, 880].forEach((frequency, index) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(frequency, now + index * 0.16);
+        gain.gain.setValueAtTime(0.0001, now + index * 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.11, now + index * 0.16 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.16 + 0.14);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start(now + index * 0.16); oscillator.stop(now + index * 0.16 + 0.16);
+      });
+    };
+    if (context.state === 'suspended') void context.resume().then(play).catch(() => undefined); else play();
+  }, [prepareNotificationSound]);
   const refreshAlerts = useCallback(async () => {
     if (!token) return;
     try { setAlerts((await request('/admin/alerts')).alerts); } catch { /* Alerts should not interrupt the current workspace. */ }
@@ -111,6 +139,33 @@ function Admin() {
   }, [load]);
   useEffect(() => { refreshAlerts(); }, [refreshAlerts]);
   useEffect(() => {
+    if (!token) { knownOrderIds.current = null; setLastSync(null); return; }
+    let cancelled = false;
+    const syncOperations = async () => {
+      try {
+        const [liveOrders, alertData] = await Promise.all([request('/admin/orders'), request('/admin/alerts')]);
+        if (cancelled) return;
+        const previous = knownOrderIds.current;
+        const newOrders = previous ? liveOrders.filter((order: Order) => !previous.has(order.id)) : [];
+        knownOrderIds.current = new Set(liveOrders.map((order: Order) => order.id));
+        setOrders(liveOrders);
+        setAlerts(alertData.alerts);
+        setLastSync(new Date());
+        if (view === 'dashboard') setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
+        if (newOrders.length) {
+          playNewOrderSound();
+          setNotice(`${newOrders.length === 1 ? 'Nuevo pedido recibido' : `${newOrders.length} pedidos nuevos recibidos`}.`);
+        }
+      } catch {
+        /* The foreground screen keeps working if a background refresh fails. */
+      }
+    };
+    void syncOperations();
+    const interval = window.setInterval(() => void syncOperations(), 10000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [playNewOrderSound, reportRange, request, token, view]);
+  useEffect(() => () => { void notificationAudio.current?.close(); }, []);
+  useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
   }, [products]);
   useEffect(() => {
@@ -122,6 +177,7 @@ function Admin() {
   }, [claims]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    prepareNotificationSound();
     setError('');
     const fields = new FormData(event.currentTarget);
     try {
@@ -464,6 +520,10 @@ function Admin() {
             </div>
           </div>
           <div className="relative flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 lg:flex" title={lastSync ? `Última sincronización: ${lastSync.toLocaleTimeString('es-PE')}` : 'Conectando actualización automática'}>
+              <span className="size-2 animate-pulse rounded-full bg-emerald-300" />
+              En vivo
+            </div>
             <button
               aria-label="Notificaciones"
               title="Notificaciones"
