@@ -17,6 +17,11 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
 app.get('/health', (c) => c.json({ ok: true }))
+const defaultStoreSettings = {
+  id:'main', businessName:'La Yeka', whatsapp:'51974121550', address:'Calle Mariscal Benavides 150, Chincha Alta',
+  district:'Chincha Alta', openingHours:'Todos los días · 6:00 p. m. a 11:00 p. m.', deliveryNote:'Confirma cobertura y tiempo de entrega por WhatsApp.',
+}
+app.get('/settings', async (c) => c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })))
 app.get('/catalog', async (c) => c.json(await db.category.findMany({ where:{ isAvailable:true }, orderBy: { position: 'asc' }, include: { products: { where: { isAvailable: true }, orderBy: { position: 'asc' } } } })))
 app.post('/auth/login', async (c) => { if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503); const data = z.object({ email:z.string().email(), password:z.string().min(10) }).safeParse(await c.req.json()); if (!data.success) return c.json({ error:'Credenciales inválidas' },400); const session=await login(data.data.email,data.data.password); return session ? c.json(session) : c.json({ error:'Correo o contraseña incorrectos' },401) })
 app.post('/auth/register', async (c) => {
@@ -38,6 +43,7 @@ app.get('/orders/me', async (c) => {
   }))
 })
 app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.product.findMany({ include:{category:true},orderBy:[{category:{position:'asc'}},{position:'asc'}] })) })
+app.get('/admin/settings', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })) })
 app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
 app.get('/admin/dashboard', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
@@ -75,6 +81,17 @@ const productInput = z.object({
   name:z.string().trim().min(2).max(100), description:z.string().trim().max(500).nullable().optional(),
   price:z.number().positive().max(999), categoryId:z.string().uuid().nullable().optional(), imagePath:z.string().url().nullable().optional(),
   isAvailable:z.boolean().optional(), isFeatured:z.boolean().optional(), position:z.number().int().min(0).optional(),
+})
+const storeSettingsInput = z.object({
+  businessName:z.string().trim().min(2).max(80), whatsapp:z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/),
+  address:z.string().trim().min(8).max(200), district:z.string().trim().min(2).max(80),
+  openingHours:z.string().trim().min(5).max(160), deliveryNote:z.string().trim().min(5).max(240),
+})
+app.patch('/admin/settings', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const parsed = storeSettingsInput.safeParse(await c.req.json())
+  if (!parsed.success) return c.json({ error:'Revisa los datos de operación.' },400)
+  return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:parsed.data, create:{id:'main',...parsed.data} }))
 })
 const productUpdate = productInput.partial()
 app.post('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productInput.safeParse(await c.req.json()); if(!parsed.success) return c.json({error:'Revisa los datos del producto.'},400); return c.json(await db.product.create({data:parsed.data,include:{category:true}}),201) })

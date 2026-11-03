@@ -2,12 +2,13 @@ import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
-import { apiBase, featuredNames, money, productVisual, whatsappNumber as wa } from './lib/client-config';
+import { apiBase, featuredNames, money, productVisual, whatsappNumber as defaultWhatsApp } from './lib/client-config';
 import type { CartItem, OrderHistory, Product } from './types/catalog';
 
 function App() {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [store, setStore] = useState({ businessName: 'La Yeka', whatsapp: defaultWhatsApp, address: 'Calle Mariscal Benavides 150, Chincha Alta', district: 'Chincha Alta', openingHours: 'Todos los días · 6:00 p. m. a 11:00 p. m.', deliveryNote: 'Confirma cobertura y tiempo de entrega por WhatsApp.' });
   const [active, setActive] = useState('Todo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -44,6 +45,15 @@ function App() {
       })
       .catch(() => setCatalogState('error'));
   }, [])
+  useEffect(() => {
+    const base = apiBase;
+    if (base === null) return;
+    fetch(base + '/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => {
+      if (!settings) return;
+      setStore(settings);
+      setDistrict(settings.district || 'Chincha Alta');
+    }).catch(() => undefined);
+  }, []);
   useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
   useEffect(() => {
     const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 400);
@@ -105,7 +115,7 @@ function App() {
     } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
     const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
-    window.open(`https://wa.me/${wa}?text=${text}`, '_blank');
+    window.open(`https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
     setSending(false);
   };
   const submitClaim = async (form: HTMLFormElement) => {
@@ -278,7 +288,7 @@ function App() {
           <div className="location-copy">
             <p className="eyebrow">VISÍTANOS</p>
             <h2>
-              Chincha Alta,
+              {store.district},
               <br />
               Perú
             </h2>
@@ -290,15 +300,15 @@ function App() {
             >
               <MapPin size={18} />
               <span>
-                Calle Mariscal Benavides 150
+                {store.address}
                 <br />
                 <small>Abrir ruta en Google Maps</small>
               </span>
             </a>
             <div className="dispatch">
               <p className="eyebrow">ZONA DE DESPACHO</p>
-              <h3>Chincha Alta</h3>
-              <p>Confirma cobertura y tiempo de entrega escribiéndonos por WhatsApp.</p>
+              <h3>{store.district}</h3>
+              <p>{store.deliveryNote}</p>
             </div>
           </div>
           <a
@@ -320,7 +330,7 @@ function App() {
             <a className="brand" href="#inicio" aria-label="La Yeka">
               <img src="/images/logo-la-yeka-v2.png" alt="La Yeka - Chincha Perú" />
             </a>
-            <p>Hecho con hambre en Chincha Alta.</p>
+            <p>{store.openingHours}</p>
           </div>
           <div>
             <h3>Pedidos</h3>

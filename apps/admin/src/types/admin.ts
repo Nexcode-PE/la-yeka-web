@@ -61,4 +61,15 @@ export type Dashboard = {
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
 };
 
-export type View = 'dashboard' | 'products' | 'orders' | 'claims';
+export type StoreSettings = {
+  id: string;
+  businessName: string;
+  whatsapp: string;
+  address: string;
+  district: string;
+  openingHours: string;
+  deliveryNote: string;
+  updatedAt: string;
+};
+
+export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings';

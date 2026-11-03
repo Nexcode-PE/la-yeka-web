@@ -100,6 +100,18 @@ model Claim {
   @@map("claims")
 }
 
+model StoreSettings {
+  id           String   @id @default("main")
+  businessName String   @default("La Yeka") @map("business_name")
+  whatsapp     String   @default("51974121550")
+  address      String   @default("Calle Mariscal Benavides 150, Chincha Alta")
+  district     String   @default("Chincha Alta")
+  openingHours String   @default("Todos los días · 6:00 p. m. a 11:00 p. m.") @map("opening_hours")
+  deliveryNote String   @default("Confirma cobertura y tiempo de entrega por WhatsApp.") @map("delivery_note")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  @@map("store_settings")
+}
+
 enum OrderStatus {
   PENDING
   CONFIRMED

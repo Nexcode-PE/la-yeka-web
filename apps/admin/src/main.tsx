@@ -16,6 +16,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Settings2,
   ShieldCheck,
   ShoppingBag,
   TriangleAlert,
@@ -26,7 +27,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
-import type { Category, Claim, Dashboard, Order, Product, View } from './types/admin';
+import type { Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
@@ -43,6 +44,7 @@ function Admin() {
   const [claimFilter, setClaimFilter] = useState<'all' | 'RECEIVED' | 'IN_REVIEW' | 'RESOLVED'>('all');
   const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,6 +81,7 @@ function Admin() {
       }
       if (view === 'orders') setOrders(await request('/admin/orders'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
+      if (view === 'settings') setStoreSettings(await request('/admin/settings'));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo conectar con la API.');
     } finally {
@@ -298,6 +301,27 @@ function Admin() {
       setSavingId('');
     }
   };
+  const saveStoreSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingId('settings');
+    setError('');
+    const fields = new FormData(event.currentTarget);
+    try {
+      const saved = await request('/admin/settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          businessName: fields.get('businessName'), whatsapp: fields.get('whatsapp'), address: fields.get('address'),
+          district: fields.get('district'), openingHours: fields.get('openingHours'), deliveryNote: fields.get('deliveryNote'),
+        }),
+      });
+      setStoreSettings(saved);
+      setNotice('Configuración operativa guardada correctamente.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo guardar la configuración.');
+    } finally {
+      setSavingId('');
+    }
+  };
   const filteredClaims = useMemo(
     () => claims.filter((claim) => claimFilter === 'all' || claim.status === claimFilter),
     [claimFilter, claims],
@@ -434,6 +458,7 @@ function Admin() {
               { id: 'products', label: 'Catálogo', icon: Package },
               { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
               { id: 'claims', label: 'Reclamos', icon: ClipboardList },
+              { id: 'settings', label: 'Configuración', icon: Settings2 },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -489,7 +514,9 @@ function Admin() {
                   ? 'Resumen de operación'
                   : view === 'orders'
                     ? 'Pedidos'
-                    : 'Libro de reclamaciones'}
+                    : view === 'claims'
+                      ? 'Libro de reclamaciones'
+                      : 'Configuración del negocio'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -843,6 +870,23 @@ function Admin() {
             )}
           </div>
         )}
+        {view === 'settings' && (
+          <form onSubmit={saveStoreSettings} className="mx-auto w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30 sm:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
+              <div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">OPERACIÓN</p><h3 className="mt-1 text-xl font-bold">Datos visibles del negocio</h3><p className="mt-1 text-sm text-slate-500">Centraliza la información de contacto, delivery y atención al cliente.</p></div>
+              {storeSettings?.updatedAt && <p className="text-xs text-slate-400">Actualizado: {new Date(storeSettings.updatedAt).toLocaleString('es-PE')}</p>}
+            </div>
+            {loading && !storeSettings ? <div className="py-10"><ContentSkeleton /></div> : storeSettings && <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">Nombre comercial<input name="businessName" defaultValue={storeSettings.businessName} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+              <label className="grid gap-1.5 text-sm font-bold">WhatsApp de pedidos<input name="whatsapp" defaultValue={storeSettings.whatsapp} required inputMode="tel" className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /><span className="text-xs font-normal text-slate-500">Usa código de país, por ejemplo 51974121550.</span></label>
+              <label className="grid gap-1.5 text-sm font-bold">Distrito<input name="district" defaultValue={storeSettings.district} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+              <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">Dirección del local<input name="address" defaultValue={storeSettings.address} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+              <label className="grid gap-1.5 text-sm font-bold">Horario de atención<input name="openingHours" defaultValue={storeSettings.openingHours} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+              <label className="grid gap-1.5 text-sm font-bold">Mensaje de delivery<textarea name="deliveryNote" defaultValue={storeSettings.deliveryNote} required rows={3} className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
+            </div>}
+            {storeSettings && <div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><button disabled={savingId === 'settings'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'settings' ? 'Guardando…' : 'Guardar configuración'}</button></div>}
+          </form>
+        )}
         {showProductForm && (
           <div
             role="dialog"
@@ -990,7 +1034,7 @@ function Admin() {
       </section>
       <nav
         aria-label="Navegación principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
       >
         {(
           [
@@ -998,6 +1042,7 @@ function Admin() {
             { id: 'products', label: 'Catálogo', icon: Package },
             { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
             { id: 'claims', label: 'Reclamos', icon: ClipboardList },
+            { id: 'settings', label: 'Config.', icon: Settings2 },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
