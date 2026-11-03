@@ -849,7 +849,7 @@ function Admin() {
                   <div className="grid gap-3">
                     {column.orders.map((order) => (
                       <article className="order-card admin-card-motion" key={order.id}>
-                        <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="order-card-layout">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <p className="truncate font-black text-slate-950">
