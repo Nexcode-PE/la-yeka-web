@@ -2,7 +2,7 @@ import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
-import { apiBase, extras, featuredNames, money, productVisual, whatsappNumber as wa } from './lib/client-config';
+import { apiBase, featuredNames, money, productVisual, whatsappNumber as wa } from './lib/client-config';
 import type { CartItem, OrderHistory, Product } from './types/catalog';
 
 function App() {
@@ -51,9 +51,11 @@ function App() {
     window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
     return () => window.removeEventListener('scroll', updateBackToTopVisibility);
   }, []);
-  const shown = useMemo(() => active === 'Todo' ? catalog : catalog.filter((p) => p.category === active), [active, catalog]);
-  const categories = useMemo(() => ['Todo', ...Array.from(new Set(catalog.map((product) => product.category)))], [catalog]);
-  const topPicks = useMemo(() => catalog.filter((product) => featuredNames.includes(product.name)), [catalog]);
+  const extras = useMemo(() => catalog.filter((product) => product.category === 'Complementos'), [catalog]);
+  const menuProducts = useMemo(() => catalog.filter((product) => product.category !== 'Complementos'), [catalog]);
+  const shown = useMemo(() => active === 'Todo' ? menuProducts : menuProducts.filter((p) => p.category === active), [active, menuProducts]);
+  const categories = useMemo(() => ['Todo', ...Array.from(new Set(menuProducts.map((product) => product.category)))], [menuProducts]);
+  const topPicks = useMemo(() => menuProducts.filter((product) => featuredNames.includes(product.name)), [menuProducts]);
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
   const triggerBurgerBuild = (origin: HTMLButtonElement) => {
@@ -75,7 +77,7 @@ function App() {
     setCartNotice(`${p.name} agregado al carrito`);
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
     cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 2500);
-    if (origin && p.category !== 'Bebidas' && p.category !== 'Complemento') triggerBurgerBuild(origin);
+    if (origin && p.category !== 'Bebidas' && p.category !== 'Complementos') triggerBurgerBuild(origin);
   };
   useEffect(() => () => {
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
@@ -419,7 +421,7 @@ function App() {
                     </div>
                   ))}
                 </div>
-                <ExtrasPicker onAdd={(extra) => add({ ...extra, detail: 'Extra para tu pedido', category: 'Complemento' })} />
+                <ExtrasPicker extras={extras} onAdd={add} />
                 <input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" />
                 <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" />
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -634,7 +636,8 @@ function App() {
   );
 }
 
-function ExtrasPicker({ onAdd }: { onAdd: (extra: { name: string; price: number }) => void }) {
-  return <section className="cart-extras"><div><p className="eyebrow">HAZLO MÁS YEKA</p><h3>Agrega complementos</h3><p>Personaliza tu pedido antes de enviarlo.</p></div><div className="cart-extra-list">{extras.map((extra) => <button key={extra.name} onClick={() => onAdd(extra)}><span>{extra.name}</span><b>+ {money(extra.price)}</b><Plus size={15} /></button>)}</div></section>;
+function ExtrasPicker({ extras, onAdd }: { extras: Product[]; onAdd: (extra: Product) => void }) {
+  if (!extras.length) return null;
+  return <section className="cart-extras"><div><p className="eyebrow">HAZLO MÁS YEKA</p><h3>Agrega complementos</h3><p>Personaliza tu pedido antes de enviarlo.</p></div><div className="cart-extra-list">{extras.map((extra) => <button key={extra.id || extra.name} onClick={() => onAdd(extra)}><span>{extra.name}</span><b>+ {money(extra.price)}</b><Plus size={15} /></button>)}</div></section>;
 }
 createRoot(document.getElementById('root')!).render(<App />);

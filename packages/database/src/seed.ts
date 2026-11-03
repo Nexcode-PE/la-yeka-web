@@ -10,6 +10,14 @@ const source = readFileSync(process.env.CATALOG_SOURCE || resolve(root, 'apps/cl
 const pattern = /\[\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(\d+)\s*,\s*'([^']+)'(?:\s*,\s*'([^']+)')?\s*,?\s*\]/g
 const entries = [...source.matchAll(pattern)].map(([, name, description, price, category, tag]) => ({ name, description, price: Number(price), category, tag }))
 const categoryNames = [...new Set(entries.map((entry) => entry.category))]
+const extras = [
+  { name: 'Jamón', description: 'Extra para tu hamburguesa', price: 2 },
+  { name: 'Queso', description: 'Extra para tu hamburguesa', price: 3 },
+  { name: 'Huevo', description: 'Extra para tu hamburguesa', price: 3 },
+  { name: 'Tocino', description: 'Extra para tu hamburguesa', price: 3 },
+  { name: 'Plátano', description: 'Extra para tu hamburguesa', price: 3 },
+  { name: 'Piña', description: 'Extra para tu hamburguesa', price: 3 },
+]
 
 for (const [position, name] of categoryNames.entries()) {
   const category = await db.category.upsert({ where: { name }, update: { position }, create: { name, position } })
@@ -19,6 +27,13 @@ for (const [position, name] of categoryNames.entries()) {
     if (existing) await db.product.update({ where: { id: existing.id }, data })
     else await db.product.create({ data: { categoryId: category.id, name: entry.name, ...data } })
   }
+}
+const extrasCategory = await db.category.upsert({ where: { name: 'Complementos' }, update: { position: categoryNames.length }, create: { name: 'Complementos', position: categoryNames.length } })
+for (const [position, extra] of extras.entries()) {
+  const existing = await db.product.findFirst({ where: { categoryId: extrasCategory.id, name: extra.name } })
+  const data = { description: extra.description, price: extra.price, position, isFeatured: false, isAvailable: true }
+  if (existing) await db.product.update({ where: { id: existing.id }, data })
+  else await db.product.create({ data: { categoryId: extrasCategory.id, name: extra.name, ...data } })
 }
 console.log(`Catálogo cargado: ${entries.length} productos.`)
 if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
