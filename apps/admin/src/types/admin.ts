@@ -82,4 +82,14 @@ export type AdminUser = {
   updatedAt: string;
 };
 
-export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings' | 'team';
+export type AuditLog = {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  detail: string | null;
+  createdAt: string;
+  admin: { name: string | null; email: string } | null;
+};
+
+export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings' | 'team' | 'audit';

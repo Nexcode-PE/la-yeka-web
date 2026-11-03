@@ -7,6 +7,9 @@ import { db } from '../../../packages/database/src/client.js'
 import { login, registerCustomer, requireAdmin, requireUser } from './auth.js'
 
 const app = new Hono().basePath('/api')
+const writeAudit = async (admin: { id:string }, action:string, entityType:string, entityId?:string, detail?:string) => {
+  await db.auditLog.create({ data:{adminId:admin.id,action,entityType,entityId,detail} })
+}
 const sessionsEnabled = () => Boolean(process.env.JWT_SECRET)
 const allowedOrigins = [process.env.CLIENT_ORIGIN, process.env.ADMIN_ORIGIN].filter(Boolean) as string[]
 app.use('*', cors({
@@ -47,6 +50,10 @@ app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('
 app.get('/admin/team', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
   return c.json(await db.user.findMany({ where:{role:'ADMIN'}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true}, orderBy:{createdAt:'asc'} }))
+})
+app.get('/admin/audit', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  return c.json(await db.auditLog.findMany({ include:{admin:{select:{name:true,email:true}}}, orderBy:{createdAt:'desc'}, take:100 }))
 })
 app.get('/admin/settings', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })) })
 app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
@@ -90,11 +97,12 @@ const productInput = z.object({
 const adminUserInput = z.object({ name:z.string().trim().min(2).max(100), email:z.string().email(), password:z.string().min(10).max(128) })
 const adminUserUpdate = z.object({ name:z.string().trim().min(2).max(100).optional(), password:z.string().min(10).max(128).optional(), isActive:z.boolean().optional() })
 app.post('/admin/team', async (c) => {
-  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const admin = await requireAdmin(c.req.header('authorization')); if (!admin) return c.json({ error:'No autorizado' },401)
   const parsed = adminUserInput.safeParse(await c.req.json())
   if (!parsed.success) return c.json({ error:'Revisa nombre, correo y contraseña (mínimo 10 caracteres).' },400)
   try {
     const user = await db.user.create({ data:{name:parsed.data.name,email:parsed.data.email.trim().toLowerCase(),passwordHash:await argon2.hash(parsed.data.password),role:'ADMIN'}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true} })
+    await writeAudit(admin,'CREATE','TEAM_MEMBER',user.id,`Creó el acceso de ${user.email}`)
     return c.json(user,201)
   } catch { return c.json({ error:'Ya existe una cuenta con este correo.' },409) }
 })
@@ -107,7 +115,9 @@ app.patch('/admin/team/:id', async (c) => {
   if (id === admin.id && parsed.data.isActive === false) return c.json({ error:'No puedes desactivar tu propia cuenta.' },400)
   try {
     const { password, ...data } = parsed.data
-    return c.json(await db.user.update({ where:{id}, data:{...data, ...(password ? {passwordHash:await argon2.hash(password)} : {})}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true} }))
+    const member = await db.user.update({ where:{id}, data:{...data, ...(password ? {passwordHash:await argon2.hash(password)} : {})}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true} })
+    await writeAudit(admin,'UPDATE','TEAM_MEMBER',id,`Actualizó el acceso de ${member.email}`)
+    return c.json(member)
   } catch { return c.json({ error:'Cuenta administrativa no encontrada.' },404) }
 })
 const storeSettingsInput = z.object({
@@ -116,10 +126,12 @@ const storeSettingsInput = z.object({
   openingHours:z.string().trim().min(5).max(160), deliveryNote:z.string().trim().min(5).max(240),
 })
 app.patch('/admin/settings', async (c) => {
-  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const admin = await requireAdmin(c.req.header('authorization')); if (!admin) return c.json({ error:'No autorizado' },401)
   const parsed = storeSettingsInput.safeParse(await c.req.json())
   if (!parsed.success) return c.json({ error:'Revisa los datos de operación.' },400)
-  return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:parsed.data, create:{id:'main',...parsed.data} }))
+  const settings = await db.storeSettings.upsert({ where:{id:'main'}, update:parsed.data, create:{id:'main',...parsed.data} })
+  await writeAudit(admin,'UPDATE','STORE_SETTINGS','main','Actualizó la configuración del negocio')
+  return c.json(settings)
 })
 const productUpdate = productInput.partial()
 app.post('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=productInput.safeParse(await c.req.json()); if(!parsed.success) return c.json({error:'Revisa los datos del producto.'},400); return c.json(await db.product.create({data:parsed.data,include:{category:true}}),201) })

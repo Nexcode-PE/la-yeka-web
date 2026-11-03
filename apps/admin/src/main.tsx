@@ -16,6 +16,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  ScrollText,
   Settings2,
   ShieldCheck,
   ShoppingBag,
@@ -28,7 +29,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
-import type { AdminUser, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
+import type { AdminUser, AuditLog, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
@@ -47,6 +48,7 @@ function Admin() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [team, setTeam] = useState<AdminUser[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,6 +89,7 @@ function Admin() {
       if (view === 'claims') setClaims(await request('/admin/claims'));
       if (view === 'settings') setStoreSettings(await request('/admin/settings'));
       if (view === 'team') setTeam(await request('/admin/team'));
+      if (view === 'audit') setAuditLogs(await request('/admin/audit'));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo conectar con la API.');
     } finally {
@@ -483,6 +486,7 @@ function Admin() {
               { id: 'claims', label: 'Reclamos', icon: ClipboardList },
               { id: 'settings', label: 'Configuración', icon: Settings2 },
               { id: 'team', label: 'Equipo', icon: UsersRound },
+              { id: 'audit', label: 'Actividad', icon: ScrollText },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -542,7 +546,9 @@ function Admin() {
                       ? 'Libro de reclamaciones'
                       : view === 'settings'
                         ? 'Configuración del negocio'
-                        : 'Equipo administrativo'}
+                        : view === 'team'
+                          ? 'Equipo administrativo'
+                          : 'Historial de actividad'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -925,6 +931,12 @@ function Admin() {
             </div>
           </div>
         )}
+        {view === 'audit' && (
+          <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
+            <div className="border-b border-slate-100 p-5"><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">TRAZABILIDAD</p><h3 className="mt-1 text-xl font-bold">Actividad administrativa</h3><p className="mt-1 text-sm text-slate-500">Últimas 100 acciones relevantes registradas por el equipo.</p></div>
+            {loading ? <div className="p-5"><ContentSkeleton /></div> : auditLogs.length ? <div>{auditLogs.map((entry) => <article key={entry.id} className="flex gap-4 border-b border-slate-100 p-5 last:border-0"><div className="mt-1 grid size-9 shrink-0 place-items-center rounded-full bg-[#eef2ff] text-[#4169ff]"><ScrollText size={17} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-slate-900">{entry.detail || `${entry.action} · ${entry.entityType}`}</p><time className="text-xs text-slate-400">{new Date(entry.createdAt).toLocaleString('es-PE')}</time></div><p className="mt-1 text-sm text-slate-500">{entry.admin?.name || entry.admin?.email || 'Administrador'} · {entry.action === 'CREATE' ? 'Creación' : 'Actualización'} de {entry.entityType === 'TEAM_MEMBER' ? 'acceso de equipo' : 'configuración del negocio'}</p></div></article>)}</div> : <Empty text="Aún no hay actividad registrada. Los próximos cambios administrativos aparecerán aquí." />}
+          </div>
+        )}
         {showProductForm && (
           <div
             role="dialog"
@@ -1073,7 +1085,7 @@ function Admin() {
       </section>
       <nav
         aria-label="Navegación principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
       >
         {(
           [
@@ -1083,6 +1095,7 @@ function Admin() {
             { id: 'claims', label: 'Reclamos', icon: ClipboardList },
             { id: 'settings', label: 'Config.', icon: Settings2 },
             { id: 'team', label: 'Equipo', icon: UsersRound },
+            { id: 'audit', label: 'Actividad', icon: ScrollText },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button
