@@ -242,11 +242,26 @@ app.patch('/admin/orders/:id/payment', async (c) => {
   try {
     const current = await db.order.findUniqueOrThrow({where:{id:c.req.param('id')}})
     const reference = parsed.data.reference === undefined ? current.paymentReference : parsed.data.reference
-    if (current.paymentMethod === 'YAPE' && parsed.data.status === 'VERIFIED' && !reference) return c.json({error:'Ingresa el código de operación Yape antes de validar el pago.'},400)
+    if (current.paymentMethod === 'YAPE' && parsed.data.status === 'VERIFIED' && (!reference || !current.paymentProofUrl)) return c.json({error:'Para validar Yape se requiere código de operación y voucher.'},400)
     const order = await db.order.update({where:{id:current.id},data:{paymentStatus:parsed.data.status,paymentReference:reference,paymentReviewedAt:parsed.data.status === 'PENDING' ? null : new Date()}})
     await writeAudit(admin,'UPDATE','ORDER_PAYMENT',order.id,`Pedido #${order.orderNumber}: pago ${order.paymentStatus}`)
     return c.json(order)
   } catch { return c.json({ error:'Pedido no encontrado.' },404) }
+})
+app.post('/orders/:id/payment-proof', async (c) => {
+  const token = c.req.header('x-payment-token')
+  if (!token) return c.json({error:'No autorizado para subir este voucher.'},401)
+  const order = await db.order.findUnique({where:{id:c.req.param('id')}})
+  if (!order || order.paymentToken !== token || order.paymentMethod !== 'YAPE') return c.json({error:'Pedido no válido para voucher.'},403)
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.VERCEL_OIDC_TOKEN) return c.json({error:'El almacenamiento de comprobantes aún no está configurado.'},503)
+  const form = await c.req.parseBody()
+  const proof = form.proof
+  if (!(proof instanceof File)) return c.json({error:'Selecciona el voucher para continuar.'},400)
+  if (!['image/jpeg','image/png','image/webp'].includes(proof.type) || proof.size > 4 * 1024 * 1024) return c.json({error:'El voucher debe ser JPG, PNG o WEBP y no superar 4 MB.'},400)
+  const extension = proof.type === 'image/png' ? 'png' : proof.type === 'image/webp' ? 'webp' : 'jpg'
+  const blob = await put(`payment-proofs/YEKA-${order.orderNumber}.${extension}`, proof, {access:'public',addRandomSuffix:true})
+  await db.order.update({where:{id:order.id},data:{paymentProofUrl:blob.url,paymentStatus:'PENDING'}})
+  return c.json({url:blob.url},201)
 })
 const claimUpdate = z.object({
   status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']).optional(),
@@ -285,7 +300,7 @@ app.post('/orders', async (c) => {
   const byId = new Map(products.map((product) => [product.id, product])); const total = parsed.data.items.reduce((sum,item) => sum + Number(byId.get(item.productId)!.price) * item.quantity,0)
   const user = await requireUser(c.req.header('authorization'))
   const order = await db.order.create({ data:{ userId:user?.id, customerName:parsed.data.customerName, customerPhone:parsed.data.customerPhone, notes:parsed.data.notes, fulfillment:parsed.data.fulfillment, paymentMethod:parsed.data.paymentMethod, paymentReference:parsed.data.paymentReference, address:parsed.data.address, district:parsed.data.district, total, items:{ create:parsed.data.items.map((item) => { const p=byId.get(item.productId)!; return { productId:p.id, productName:p.name, unitPrice:p.price, quantity:item.quantity } }) }, statusEvents:{create:{toStatus:'PENDING',reason:'Pedido creado'}} } })
-  return c.json({ id:order.id, orderNumber:order.orderNumber, total },201)
+  return c.json({ id:order.id, orderNumber:order.orderNumber, paymentToken:order.paymentToken, total },201)
 })
 const claimInput=z.object({ customerName:z.string().min(2),document:z.string().min(4),email:z.string().email(),phone:z.string().min(6),kind:z.enum(['COMPLAINT','SERVICE_ISSUE']),orderReference:z.string().optional(),detail:z.string().min(10),requestedSolution:z.string().min(5) })
 app.post('/claims', async(c)=>{const parsed=claimInput.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Datos inválidos'},400);const claim=await db.claim.create({data:parsed.data});return c.json({id:claim.id},201)})

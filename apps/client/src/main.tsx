@@ -18,6 +18,7 @@ function App() {
   const [fulfillment, setFulfillment] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [paymentReference, setPaymentReference] = useState('');
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [address, setAddress] = useState('');
   const [district, setDistrict] = useState('Chincha Alta');
   const [sending, setSending] = useState(false);
@@ -112,6 +113,12 @@ function App() {
         const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, fulfillment, paymentMethod, paymentReference: paymentMethod === 'YAPE' ? paymentReference : undefined, address: fulfillment === 'DELIVERY' ? address : undefined, district: fulfillment === 'DELIVERY' ? district : undefined, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
         if (!response.ok) throw new Error('No fue posible registrar el pedido');
         const created = await response.json();
+        if (paymentMethod === 'YAPE') {
+          if (!paymentProof) throw new Error('Adjunta el voucher de Yape para continuar.');
+          const form = new FormData(); form.append('proof', paymentProof);
+          const proofResponse = await fetch(`${api}/api/orders/${created.id}/payment-proof`, { method:'POST', headers:{'X-Payment-Token':created.paymentToken}, body:form });
+          if (!proofResponse.ok) { const body = await proofResponse.json().catch(() => ({})); throw new Error(body.error || 'No se pudo subir el voucher.'); }
+        }
         orderId = `YEKA-${String(created.orderNumber).padStart(6, '0')}`;
       }
     } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
@@ -440,7 +447,7 @@ function App() {
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option></select>
                 </div>
-                {paymentMethod === 'YAPE' && <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" />}
+                {paymentMethod === 'YAPE' && <div className="mt-2 grid gap-2"><input className="w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" /><label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">Voucher Yape<input className="mt-2 block w-full text-xs font-normal" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} /><span className="mt-1 block text-xs font-normal text-stone-500">{paymentProof ? `Adjunto: ${paymentProof.name}` : 'JPG, PNG o WEBP; máximo 4 MB.'}</span></label></div>}
                 {fulfillment === 'DELIVERY' && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
                 <textarea
                   value={note}
@@ -451,7 +458,7 @@ function App() {
                   <span>Total</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && !paymentReference.trim()) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
+                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
                   {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'} <ChevronRight size={19} />
                 </button>
                 <p className="secure">

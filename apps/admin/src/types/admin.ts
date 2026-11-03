@@ -28,6 +28,7 @@ export type Order = {
   paymentMethod: 'CASH' | 'YAPE';
   paymentStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   paymentReference: string | null;
+  paymentProofUrl: string | null;
   address: string | null;
   district: string | null;
   items: Array<{ productName: string; quantity: number }>;

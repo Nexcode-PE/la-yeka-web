@@ -60,6 +60,8 @@ model Order {
   paymentMethod PaymentMethod @default(CASH) @map("payment_method")
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
   paymentReference String? @map("payment_reference")
+  paymentProofUrl String? @map("payment_proof_url")
+  paymentToken  String @unique @default(uuid()) @map("payment_token") @db.Uuid
   paymentReviewedAt DateTime? @map("payment_reviewed_at")
   address       String?
   district      String?
