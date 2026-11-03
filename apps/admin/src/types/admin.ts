@@ -92,4 +92,13 @@ export type AuditLog = {
   admin: { name: string | null; email: string } | null;
 };
 
+export type AdminAlert = {
+  id: string;
+  kind: 'ORDER' | 'CLAIM' | 'CATALOG';
+  title: string;
+  description: string;
+  createdAt: string;
+  view: 'orders' | 'claims' | 'products';
+};
+
 export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings' | 'team' | 'audit';

@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
-import type { AdminUser, AuditLog, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
+import type { AdminAlert, AdminUser, AuditLog, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
@@ -49,6 +49,8 @@ function Admin() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [team, setTeam] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -71,6 +73,10 @@ function Admin() {
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [notice, setNotice] = useState('');
   const request = useAdminRequest(token);
+  const refreshAlerts = useCallback(async () => {
+    if (!token) return;
+    try { setAlerts((await request('/admin/alerts')).alerts); } catch { /* Alerts should not interrupt the current workspace. */ }
+  }, [request, token]);
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
@@ -99,6 +105,7 @@ function Admin() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => { refreshAlerts(); }, [refreshAlerts]);
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
   }, [products]);
@@ -136,6 +143,7 @@ function Admin() {
       await request(`/admin/${kind}/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
       setNotice('Cambios guardados correctamente.');
       await load();
+      await refreshAlerts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
     } finally {
@@ -302,6 +310,7 @@ function Admin() {
     try {
       await request(`/admin/claims/${claim.id}`, { method: 'PATCH', body: JSON.stringify(data) });
       await load();
+      await refreshAlerts();
       setNotice('Seguimiento del reclamo guardado correctamente.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el reclamo.');
@@ -427,14 +436,17 @@ function Admin() {
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <button
               aria-label="Notificaciones"
-              title="No hay notificaciones"
-              className="grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-200 transition hover:border-amber-300/40 hover:bg-amber-400/10"
+              title="Notificaciones"
+              onClick={() => setAlertsOpen((open) => !open)}
+              className="relative grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-200 transition hover:border-amber-300/40 hover:bg-amber-400/10"
             >
               <Bell size={18} />
+              {alerts.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[#4169ff] px-1 text-[10px] font-black text-white">{alerts.length > 9 ? '9+' : alerts.length}</span>}
             </button>
+            {alertsOpen && <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-2xl"><div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><p className="text-sm font-bold">Alertas operativas</p><p className="text-xs text-slate-500">Requieren atención del equipo.</p></div><button onClick={() => { setAlertsOpen(false); void refreshAlerts(); }} className="text-xs font-semibold text-[#4169ff]">Actualizar</button></div>{alerts.length ? <div className="max-h-80 overflow-y-auto">{alerts.map((alert) => <button key={alert.id} onClick={() => { setView(alert.view); setAlertsOpen(false); }} className="block w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 last:border-0"><div className="flex items-center justify-between gap-3"><p className="text-sm font-bold">{alert.title}</p><time className="shrink-0 text-[10px] text-slate-400">{new Date(alert.createdAt).toLocaleDateString('es-PE')}</time></div><p className="mt-1 text-xs leading-5 text-slate-500">{alert.description}</p></button>)}</div> : <p className="p-6 text-center text-sm text-slate-500">No hay alertas pendientes.</p>}</div>}
             <button
               onClick={logout}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-400/45 bg-amber-400 px-3 text-sm font-bold text-stone-950 transition hover:bg-amber-300"

@@ -55,6 +55,20 @@ app.get('/admin/audit', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
   return c.json(await db.auditLog.findMany({ include:{admin:{select:{name:true,email:true}}}, orderBy:{createdAt:'desc'}, take:100 }))
 })
+app.get('/admin/alerts', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const [orders, claims, pausedProducts] = await Promise.all([
+    db.order.findMany({ where:{status:'PENDING'}, select:{id:true,customerName:true,total:true,createdAt:true}, orderBy:{createdAt:'desc'}, take:5 }),
+    db.claim.findMany({ where:{status:{in:['RECEIVED','IN_REVIEW']}}, select:{id:true,customerName:true,kind:true,createdAt:true}, orderBy:{createdAt:'desc'}, take:5 }),
+    db.product.count({where:{isAvailable:false}}),
+  ])
+  const alerts = [
+    ...orders.map((order) => ({ id:`order-${order.id}`, kind:'ORDER', title:'Pedido por confirmar', description:`${order.customerName || 'Cliente'} · S/ ${Number(order.total).toFixed(2)}`, createdAt:order.createdAt, view:'orders' })),
+    ...claims.map((claim) => ({ id:`claim-${claim.id}`, kind:'CLAIM', title:'Reclamo pendiente', description:`${claim.customerName} · ${claim.kind === 'COMPLAINT' ? 'Reclamo' : 'Queja'}`, createdAt:claim.createdAt, view:'claims' })),
+    ...(pausedProducts ? [{ id:'paused-products', kind:'CATALOG', title:'Productos pausados', description:`Hay ${pausedProducts} producto${pausedProducts === 1 ? '' : 's'} fuera de la carta.`, createdAt:new Date(), view:'products' }] : []),
+  ].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return c.json({ count:alerts.length, alerts })
+})
 app.get('/admin/settings', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })) })
 app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
 app.get('/admin/dashboard', async (c) => {
