@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Menu,
   Bell,
+  CheckCircle2,
   ChartNoAxesCombined,
   ChevronRight,
   ExternalLink,
@@ -146,12 +147,19 @@ function Admin() {
         { title: 'Nuevos', statuses: ['PENDING'], tone: 'border-amber-400' },
         { title: 'En cocina', statuses: ['CONFIRMED', 'PREPARING'], tone: 'border-orange-400' },
         { title: 'Listos / entrega', statuses: ['READY'], tone: 'border-emerald-400' },
+        { title: 'Cerrados', statuses: ['DELIVERED', 'CANCELLED'], tone: 'border-slate-300' },
       ].map((column) => ({
         ...column,
         orders: orders.filter((order) => column.statuses.includes(order.status)),
       })),
     [orders],
   );
+  const nextOrderAction: Record<string, { status: string; label: string }> = {
+    PENDING: { status: 'CONFIRMED', label: 'Confirmar pedido' },
+    CONFIRMED: { status: 'PREPARING', label: 'Iniciar preparación' },
+    PREPARING: { status: 'READY', label: 'Marcar como listo' },
+    READY: { status: 'DELIVERED', label: 'Cerrar como entregado' },
+  };
   const uploadProductImage = async (file: File) => {
     const form = new FormData();
     form.append('image', file);
@@ -640,9 +648,9 @@ function Admin() {
           </div>
         )}
         {view === 'orders' && (
-          <div className="grid gap-4 xl:grid-cols-3">
-            {loading ? <div className="xl:col-span-3"><ContentSkeleton /></div> : orders.length === 0 ? (
-              <div className="xl:col-span-3">
+          <div className="grid gap-4 xl:grid-cols-4">
+            {loading ? <div className="xl:col-span-4"><ContentSkeleton /></div> : orders.length === 0 ? (
+              <div className="xl:col-span-4">
                 <Empty text="Aún no hay pedidos registrados." />
               </div>
             ) : (
@@ -662,10 +670,15 @@ function Admin() {
                       <article className="rounded-xl bg-white p-4 shadow-sm" key={order.id}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="font-black">
-                              {order.customerName || 'Cliente sin nombre'} · S/{' '}
-                              {Number(order.total).toFixed(2)}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-black">
+                                {order.customerName || 'Cliente sin nombre'} · S/{' '}
+                                {Number(order.total).toFixed(2)}
+                              </p>
+                              <span className="font-mono text-[10px] text-stone-400">
+                                #{order.id.slice(0, 8).toUpperCase()}
+                              </span>
+                            </div>
                             <p className="mt-1 text-sm text-stone-500">
                               {order.customerPhone} ·{' '}
                               {new Date(order.createdAt).toLocaleString('es-PE')}
@@ -684,17 +697,28 @@ function Admin() {
                                 .join(', ')}
                             </p>
                           </div>
-                          <Status
-                            value={order.status}
-                            options={statusOptions.orders}
-                            onChange={(status) => update('orders', order.id, { status })}
-                          />
-                          <button
-                            onClick={() => openWhatsApp(order)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
-                          >
-                            <ExternalLink size={15} /> WhatsApp
-                          </button>
+                          <div className="grid w-full gap-2 sm:w-auto">
+                            <Status
+                              value={order.status}
+                              options={statusOptions.orders}
+                              onChange={(status) => update('orders', order.id, { status })}
+                            />
+                            {nextOrderAction[order.status] && (
+                              <button
+                                onClick={() => update('orders', order.id, { status: nextOrderAction[order.status].status })}
+                                disabled={savingId === order.id}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4169ff] px-3 py-2 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-wait disabled:opacity-60"
+                              >
+                                <CheckCircle2 size={15} /> {nextOrderAction[order.status].label}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openWhatsApp(order)}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
+                            >
+                              <ExternalLink size={15} /> WhatsApp
+                            </button>
+                          </div>
                         </div>
                       </article>
                     ))}

@@ -124,7 +124,7 @@ app.delete('/admin/categories/:id', async (c) => {
 })
 app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.order.findMany({ include:{items:true},orderBy:{createdAt:'desc'},take:100 })) })
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })
-const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED']) })
+const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']) })
 app.patch('/admin/orders/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = orderStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.order.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })
 const claimStatus = z.object({ status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']) })
 app.patch('/admin/claims/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = claimStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.claim.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })

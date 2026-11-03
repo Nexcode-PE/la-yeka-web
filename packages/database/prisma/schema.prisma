@@ -101,6 +101,7 @@ enum OrderStatus {
   CONFIRMED
   PREPARING
   READY
+  DELIVERED
   CANCELLED
 }
 
