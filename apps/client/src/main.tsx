@@ -153,6 +153,14 @@ function App() {
     } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
     const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}${paymentMethod === 'YAPE' ? `%0ACódigo Yape: ${encodeURIComponent(paymentReference)}` : ''}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
+    setCart([]);
+    setNote('');
+    setPaymentReference('');
+    setPaymentProof(null);
+    setOpen(false);
+    setCartNotice(orderId ? `Pedido ${orderId} registrado. Continúa la confirmación por WhatsApp.` : 'Pedido listo. Continúa la confirmación por WhatsApp.');
+    if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
+    cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 5000);
     window.open(`https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
     setSending(false);
   };
