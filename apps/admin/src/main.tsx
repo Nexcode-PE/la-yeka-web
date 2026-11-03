@@ -26,7 +26,7 @@ import {
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
 import type { Category, Claim, Dashboard, Order, Product, View } from './types/admin';
-import { Empty, Stat, Status } from './components/ui';
+import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
 
@@ -489,7 +489,7 @@ function Admin() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 sm:p-4">
               <div className="grid grid-cols-[repeat(auto-fill,minmax(205px,1fr))] gap-4">
-                {filteredProducts.map((product) => (
+                {loading ? <div className="col-span-full"><ContentSkeleton variant="cards" /></div> : filteredProducts.map((product) => (
                   <article
                     className="group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
                     key={product.id}
@@ -582,7 +582,7 @@ function Admin() {
                   </article>
                 ))}
               </div>
-              {filteredProducts.length === 0 && (
+              {!loading && filteredProducts.length === 0 && (
                 <Empty text="No encontramos productos con esos filtros." />
               )}
             </div>
@@ -590,7 +590,7 @@ function Admin() {
         )}
         {view === 'orders' && (
           <div className="grid gap-4 xl:grid-cols-3">
-            {orders.length === 0 ? (
+            {loading ? <div className="xl:col-span-3"><ContentSkeleton /></div> : orders.length === 0 ? (
               <div className="xl:col-span-3">
                 <Empty text="Aún no hay pedidos registrados." />
               </div>
@@ -660,7 +660,7 @@ function Admin() {
         )}
         {view === 'claims' && (
           <div className="grid gap-4">
-            {claims.length === 0 ? (
+            {loading ? <ContentSkeleton /> : claims.length === 0 ? (
               <Empty text="Aún no hay reclamos ni quejas." />
             ) : (
               claims.map((claim) => (

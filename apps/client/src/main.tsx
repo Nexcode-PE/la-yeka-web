@@ -247,7 +247,7 @@ function App() {
             ))}
           </div>
           <div className="grid">
-            {shown.map((p, i) => (
+            {catalogState !== 'loading' && shown.map((p, i) => (
               <article className={'product p' + (i % 5)} key={p.name}>
                 {p.tag && <label>{p.tag}</label>}
                 <div className={`product-art ${p.category === 'Bebidas' ? 'drink-art' : ''}`}>
@@ -267,7 +267,7 @@ function App() {
                 </div>
               </article>
             ))}
-            {catalogState === 'loading' && <p className="col-span-full py-12 text-center text-stone-500">Cargando la carta…</p>}
+            {catalogState === 'loading' && Array.from({ length: 8 }, (_, index) => <article key={index} className="product animate-pulse"><div className="product-art bg-stone-200" /><div className="product-info"><div><div className="h-4 w-3/4 rounded bg-stone-200" /><div className="mt-2 h-3 w-full rounded bg-stone-100" /></div><div className="flex items-center justify-between"><div className="h-4 w-12 rounded bg-stone-200" /><div className="size-8 rounded-full bg-stone-200" /></div></div></article>)}
             {catalogState === 'error' && <p className="col-span-full py-12 text-center text-stone-500">No pudimos cargar la carta. Inténtalo nuevamente en unos minutos.</p>}
             {catalogState === 'ready' && shown.length === 0 && <p className="col-span-full py-12 text-center text-stone-500">Por ahora no hay productos disponibles en esta categoría.</p>}
           </div>
