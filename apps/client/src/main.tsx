@@ -31,6 +31,8 @@ function App() {
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [cartNotice, setCartNotice] = useState('');
   const cartNoticeTimeout = useRef<number | null>(null);
+  const deleteTimeout = useRef<number | null>(null);
+  const [deletingItem, setDeletingItem] = useState<string | null>(null);
   const cartButtonRef = useRef<HTMLButtonElement>(null);
   const [burgerBuild, setBurgerBuild] = useState<{ x: number; y: number; flyX: number; flyY: number; id: number } | null>(null);
   const [cartPulse, setCartPulse] = useState(false);
@@ -95,6 +97,7 @@ function App() {
   useEffect(() => () => {
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
     if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
+    if (deleteTimeout.current !== null) window.clearTimeout(deleteTimeout.current);
   }, []);
   const change = (name: string, d: number) =>
     setCart((c) =>
@@ -102,7 +105,19 @@ function App() {
         x.name === name && x.qty + d === 0 ? [] : x.name === name ? { ...x, qty: x.qty + d } : x,
       ),
     );
-  const remove = (name: string) => setCart((c) => c.filter((x) => x.name !== name));
+  const remove = (name: string) => {
+    if (deletingItem) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setCart((items) => items.filter((item) => item.name !== name));
+      return;
+    }
+    setDeletingItem(name);
+    deleteTimeout.current = window.setTimeout(() => {
+      setCart((items) => items.filter((item) => item.name !== name));
+      setDeletingItem(null);
+      deleteTimeout.current = null;
+    }, 320);
+  };
   const send = async () => {
     if (!cart.length) return;
     if (!customerName.trim() || !customerPhone.trim() || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))) return;
@@ -428,7 +443,7 @@ function App() {
               <>
                 <div className="cart-items">
                   {cart.map((x) => (
-                    <div className="cart-item" key={x.name}>
+                    <div className={`cart-item ${deletingItem === x.name ? 'cart-item-removing' : ''}`} key={x.name}>
                       <div>
                         <h3>{x.name}</h3>
                         <p>{money(x.price)} c/u</p>
@@ -444,9 +459,10 @@ function App() {
                       </div>
                       <strong>{money(x.price * x.qty)}</strong>
                       <button
-                        className="ml-2 grid size-8 place-items-center rounded border-0 bg-red-50 text-red-700 hover:bg-red-100"
+                        className={`cart-delete-button ml-2 grid size-8 place-items-center rounded border-0 bg-red-50 text-red-700 hover:bg-red-100 ${deletingItem === x.name ? 'is-deleting' : ''}`}
                         aria-label={`Eliminar ${x.name}`}
                         onClick={() => remove(x.name)}
+                        disabled={Boolean(deletingItem)}
                       >
                         <Trash2 size={16} />
                       </button>

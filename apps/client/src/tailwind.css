@@ -123,6 +123,10 @@
   .cart-item h3 { @apply mb-1 text-sm font-extrabold; }
   .cart-item p { @apply mb-0 text-xs text-stone-500; }
   .cart-item > strong { @apply font-mono text-sm; }
+  .cart-delete-button { transition: transform .18s ease, background-color .18s ease, color .18s ease; }
+  .cart-delete-button:hover { transform: scale(1.08); }
+  .cart-delete-button.is-deleting { animation: yeka-trash-delete .32s cubic-bezier(.2,.8,.2,1) both; }
+  .cart-item-removing { animation: yeka-cart-item-out .32s ease-in both; pointer-events: none; }
   .qty { @apply flex items-center gap-2; }
   .qty button { @apply grid size-7 place-items-center rounded-full border border-stone-200 bg-white; }
   .qty b { @apply text-xs; }
@@ -186,10 +190,20 @@
   0%, 100% { transform: scale(1); }
   45% { transform: scale(1.12); }
 }
+@keyframes yeka-trash-delete {
+  0% { transform: rotate(0) scale(1); }
+  25% { transform: rotate(-14deg) scale(1.16); }
+  52% { transform: rotate(12deg) scale(1.08); }
+  78% { transform: rotate(-7deg) scale(1.02); }
+  100% { transform: rotate(0) scale(.82); opacity: .25; }
+}
+@keyframes yeka-cart-item-out {
+  to { opacity: 0; transform: translateX(20px) scale(.98); }
+}
 @keyframes yeka-nav-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes yeka-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes yeka-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes yeka-modal-in { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .burger-build, .burger-layer, .cart-pulse, header, .hero-copy, .panel, .modal-card { animation: none !important; }
+  .burger-build, .burger-layer, .cart-pulse, .cart-delete-button.is-deleting, .cart-item-removing, header, .hero-copy, .panel, .modal-card { animation: none !important; }
 }
