@@ -92,7 +92,11 @@ model Claim {
   detail        String
   requestedSolution String @map("requested_solution")
   status        ClaimStatus @default(RECEIVED)
+  adminResponse String?  @map("admin_response")
+  respondedAt   DateTime? @map("responded_at")
+  resolvedAt    DateTime? @map("resolved_at")
   createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
   @@map("claims")
 }
 

@@ -40,6 +40,8 @@ function Admin() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [claimFilter, setClaimFilter] = useState<'all' | 'RECEIVED' | 'IN_REVIEW' | 'RESOLVED'>('all');
+  const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,6 +90,9 @@ function Admin() {
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
   }, [products]);
+  useEffect(() => {
+    setClaimDrafts(Object.fromEntries(claims.map((claim) => [claim.id, claim.adminResponse || ''])));
+  }, [claims]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
@@ -279,6 +284,23 @@ function Admin() {
     const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido #${order.id.slice(0, 8).toUpperCase()}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}%0A%0ATotal: S/ ${Number(order.total).toFixed(2)}%0AEstado: ${labels[order.status]}.`;
     window.open(`https://wa.me/${normalized}?text=${message}`, '_blank', 'noopener,noreferrer');
   };
+  const saveClaim = async (claim: Claim, data: { status?: string; adminResponse?: string | null }) => {
+    setSavingId(claim.id);
+    setError('');
+    try {
+      await request(`/admin/claims/${claim.id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      await load();
+      setNotice('Seguimiento del reclamo guardado correctamente.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el reclamo.');
+    } finally {
+      setSavingId('');
+    }
+  };
+  const filteredClaims = useMemo(
+    () => claims.filter((claim) => claimFilter === 'all' || claim.status === claimFilter),
+    [claimFilter, claims],
+  );
   if (!token)
     return (
       <main className="relative grid min-h-screen place-items-center overflow-hidden bg-slate-950 px-5 py-10 text-slate-950 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-[#4169ff]">
@@ -735,26 +757,85 @@ function Admin() {
         )}
         {view === 'claims' && (
           <div className="grid gap-4">
-            {loading ? <ContentSkeleton /> : claims.length === 0 ? (
-              <Empty text="Aún no hay reclamos ni quejas." />
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30">
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', 'Todos'],
+                  ['RECEIVED', 'Recibidos'],
+                  ['IN_REVIEW', 'En revisión'],
+                  ['RESOLVED', 'Cerrados'],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setClaimFilter(value)}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold transition ${claimFilter === value ? 'bg-[#4169ff] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    {label} {value === 'all' ? claims.length : claims.filter((claim) => claim.status === value).length}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500">Responder y cerrar deja constancia en el expediente.</p>
+            </div>
+            {loading ? <ContentSkeleton /> : filteredClaims.length === 0 ? (
+              <Empty text="No hay reclamos en este estado." />
             ) : (
-              claims.map((claim) => (
-                <article className="rounded-2xl bg-white p-5 shadow-sm" key={claim.id}>
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="font-black">
-                        {claim.customerName} · {labels[claim.kind]}
-                      </p>
+              filteredClaims.map((claim) => (
+                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30" key={claim.id}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-black">{claim.customerName} · {labels[claim.kind]}</p>
+                        <span className="font-mono text-[10px] text-slate-400">#{claim.id.slice(0, 8).toUpperCase()}</span>
+                      </div>
                       <p className="mt-1 text-sm text-stone-500">
-                        {claim.email} · {new Date(claim.createdAt).toLocaleDateString('es-PE')}
+                        {claim.email} · {claim.phone} · DNI/Doc. {claim.document}
                       </p>
-                      <p className="mt-3 text-sm leading-6">{claim.detail}</p>
+                      <p className="mt-1 text-xs text-stone-400">
+                        Recibido: {new Date(claim.createdAt).toLocaleString('es-PE')}
+                        {claim.orderReference ? ` · Pedido: ${claim.orderReference}` : ''}
+                      </p>
                     </div>
                     <Status
                       value={claim.status}
                       options={statusOptions.claims}
-                      onChange={(status) => update('claims', claim.id, { status })}
+                      onChange={(status) => void saveClaim(claim, { status, adminResponse: claimDrafts[claim.id] || undefined })}
                     />
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">DETALLE DECLARADO</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-700">{claim.detail}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">SOLUCIÓN SOLICITADA</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-700">{claim.requestedSolution}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2">
+                    <label className="grid gap-1.5 text-sm font-bold text-slate-800">
+                      Respuesta administrativa
+                      <textarea
+                        value={claimDrafts[claim.id] ?? ''}
+                        onChange={(event) => setClaimDrafts((current) => ({ ...current, [claim.id]: event.target.value }))}
+                        rows={3}
+                        maxLength={2000}
+                        placeholder="Indica la respuesta y solución propuesta para el cliente."
+                        className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal outline-none ring-[#4169ff] focus:ring-2"
+                      />
+                    </label>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-slate-500">
+                        {claim.respondedAt ? `Última respuesta: ${new Date(claim.respondedAt).toLocaleString('es-PE')}` : 'Aún no se registró una respuesta.'}
+                        {claim.resolvedAt ? ` · Cerrado: ${new Date(claim.resolvedAt).toLocaleString('es-PE')}` : ''}
+                      </p>
+                      <button
+                        onClick={() => void saveClaim(claim, { adminResponse: claimDrafts[claim.id] || null })}
+                        disabled={savingId === claim.id || !claimDrafts[claim.id]?.trim()}
+                        className="h-9 rounded-lg bg-[#4169ff] px-3 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingId === claim.id ? 'Guardando…' : 'Guardar respuesta'}
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))

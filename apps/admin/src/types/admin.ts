@@ -33,10 +33,17 @@ export type Order = {
 export type Claim = {
   id: string;
   customerName: string;
+  document: string;
   email: string;
+  phone: string;
   kind: string;
+  orderReference: string | null;
   detail: string;
+  requestedSolution: string;
   status: string;
+  adminResponse: string | null;
+  respondedAt: string | null;
+  resolvedAt: string | null;
   createdAt: string;
 };
 

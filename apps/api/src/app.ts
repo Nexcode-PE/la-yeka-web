@@ -126,8 +126,30 @@ app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('au
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })
 const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']) })
 app.patch('/admin/orders/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = orderStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.order.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })
-const claimStatus = z.object({ status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']) })
-app.patch('/admin/claims/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = claimStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.claim.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })
+const claimUpdate = z.object({
+  status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']).optional(),
+  adminResponse: z.string().trim().min(10).max(2000).nullable().optional(),
+})
+app.patch('/admin/claims/:id', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const parsed = claimUpdate.safeParse(await c.req.json())
+  if (!parsed.success || Object.keys(parsed.data).length === 0) return c.json({ error:'Datos inválidos. La respuesta debe tener al menos 10 caracteres.' },400)
+  try {
+    const current = await db.claim.findUniqueOrThrow({ where:{ id:c.req.param('id') } })
+    const nextStatus = parsed.data.status ?? current.status
+    const nextResponse = parsed.data.adminResponse === undefined ? current.adminResponse : parsed.data.adminResponse
+    if (nextStatus === 'RESOLVED' && !nextResponse) return c.json({ error:'Registra una respuesta antes de cerrar el caso.' },400)
+    const responseChanged = parsed.data.adminResponse !== undefined && parsed.data.adminResponse !== current.adminResponse
+    return c.json(await db.claim.update({
+      where:{ id:current.id },
+      data:{
+        ...parsed.data,
+        ...(responseChanged && parsed.data.adminResponse ? { respondedAt:new Date() } : {}),
+        ...(nextStatus === 'RESOLVED' && current.status !== 'RESOLVED' ? { resolvedAt:new Date() } : {}),
+      },
+    }))
+  } catch { return c.json({ error:'Reclamo no encontrado.' },404) }
+})
 
 const orderInput = z.object({
   customerName:z.string().min(2), customerPhone:z.string().min(6), notes:z.string().max(500).optional(),
