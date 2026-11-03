@@ -23,11 +23,12 @@ import {
   Trash2,
   Upload,
   UtensilsCrossed,
+  UsersRound,
   X,
 } from 'lucide-react';
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
-import type { Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
+import type { AdminUser, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
@@ -45,6 +46,7 @@ function Admin() {
   const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [team, setTeam] = useState<AdminUser[]>([]);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,8 @@ function Admin() {
   const [productImage, setProductImage] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [showTeamForm, setShowTeamForm] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [savingCategoryId, setSavingCategoryId] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
@@ -82,6 +86,7 @@ function Admin() {
       if (view === 'orders') setOrders(await request('/admin/orders'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
       if (view === 'settings') setStoreSettings(await request('/admin/settings'));
+      if (view === 'team') setTeam(await request('/admin/team'));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo conectar con la API.');
     } finally {
@@ -322,6 +327,24 @@ function Admin() {
       setSavingId('');
     }
   };
+  const saveAdminUser = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSavingId('team'); setError('');
+    const fields = new FormData(event.currentTarget);
+    const data = { name: fields.get('name'), ...(editingAdmin ? {} : { email: fields.get('email') }), ...(fields.get('password') ? { password: fields.get('password') } : {}) };
+    try {
+      await request(editingAdmin ? `/admin/team/${editingAdmin.id}` : '/admin/team', { method: editingAdmin ? 'PATCH' : 'POST', body: JSON.stringify(data) });
+      setShowTeamForm(false); setEditingAdmin(null); await load();
+      setNotice(editingAdmin ? 'Acceso administrativo actualizado.' : 'Nueva cuenta administrativa creada.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar el acceso.'); }
+    finally { setSavingId(''); }
+  };
+  const toggleAdminUser = async (member: AdminUser) => {
+    setSavingId(member.id); setError('');
+    try { await request(`/admin/team/${member.id}`, { method:'PATCH', body:JSON.stringify({isActive:!member.isActive}) }); await load(); setNotice(member.isActive ? 'Acceso desactivado.' : 'Acceso reactivado.'); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el acceso.'); }
+    finally { setSavingId(''); }
+  };
   const filteredClaims = useMemo(
     () => claims.filter((claim) => claimFilter === 'all' || claim.status === claimFilter),
     [claimFilter, claims],
@@ -459,6 +482,7 @@ function Admin() {
               { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
               { id: 'claims', label: 'Reclamos', icon: ClipboardList },
               { id: 'settings', label: 'Configuración', icon: Settings2 },
+              { id: 'team', label: 'Equipo', icon: UsersRound },
             ] as const
           ).map(({ id, label, icon: Icon }) => (
             <button
@@ -516,7 +540,9 @@ function Admin() {
                     ? 'Pedidos'
                     : view === 'claims'
                       ? 'Libro de reclamaciones'
-                      : 'Configuración del negocio'}
+                      : view === 'settings'
+                        ? 'Configuración del negocio'
+                        : 'Equipo administrativo'}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -887,6 +913,18 @@ function Admin() {
             {storeSettings && <div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><button disabled={savingId === 'settings'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'settings' ? 'Guardando…' : 'Guardar configuración'}</button></div>}
           </form>
         )}
+        {view === 'team' && (
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
+              <div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">ACCESOS</p><h3 className="mt-1 text-xl font-bold">Equipo administrativo</h3><p className="mt-1 text-sm text-slate-500">Solo las cuentas activas pueden ingresar y gestionar la operación.</p></div>
+              <button onClick={() => { setEditingAdmin(null); setShowTeamForm(true); }} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-bold text-white hover:bg-[#3156d8]"><Plus size={16} /> Nuevo acceso</button>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
+              {loading ? <div className="p-5"><ContentSkeleton /></div> : team.map((member) => <article key={member.id} className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 p-5 last:border-0"><div><div className="flex items-center gap-2"><p className="font-bold">{member.name || 'Sin nombre'}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${member.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{member.isActive ? 'Activo' : 'Desactivado'}</span></div><p className="mt-1 text-sm text-slate-500">{member.email}</p><p className="mt-1 text-xs text-slate-400">Creado: {new Date(member.createdAt).toLocaleDateString('es-PE')}</p></div><div className="flex gap-2"><button onClick={() => { setEditingAdmin(member); setShowTeamForm(true); }} className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Pencil size={14} /> Editar</button><button disabled={savingId === member.id} onClick={() => void toggleAdminUser(member)} className={`h-9 rounded-lg px-3 text-sm font-semibold ${member.isActive ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>{member.isActive ? 'Desactivar' : 'Activar'}</button></div></article>)}
+              {!loading && team.length === 0 && <Empty text="Aún no hay cuentas administrativas." />}
+            </div>
+          </div>
+        )}
         {showProductForm && (
           <div
             role="dialog"
@@ -1031,10 +1069,11 @@ function Admin() {
             onDelete={deleteCategory}
           />
         )}
+        {showTeamForm && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4"><form onSubmit={saveAdminUser} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">EQUIPO</p><h3 className="mt-1 text-xl font-bold">{editingAdmin ? 'Editar acceso' : 'Nuevo acceso administrativo'}</h3></div><button type="button" aria-label="Cerrar" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button></div><div className="mt-6 grid gap-4"><label className="grid gap-1.5 text-sm font-bold">Nombre<input name="name" defaultValue={editingAdmin?.name || ''} required minLength={2} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>{!editingAdmin && <label className="grid gap-1.5 text-sm font-bold">Correo electrónico<input name="email" type="email" required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>}<label className="grid gap-1.5 text-sm font-bold">{editingAdmin ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}<input name="password" type="password" required={!editingAdmin} minLength={10} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /><span className="text-xs font-normal text-slate-500">Mínimo 10 caracteres. Compártela por un canal seguro.</span></label></div><div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button><button disabled={savingId === 'team'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'team' ? 'Guardando…' : editingAdmin ? 'Guardar cambios' : 'Crear acceso'}</button></div></form></div>}
       </section>
       <nav
         aria-label="Navegación principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white px-2 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-slate-200 bg-white px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
       >
         {(
           [
@@ -1043,6 +1082,7 @@ function Admin() {
             { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
             { id: 'claims', label: 'Reclamos', icon: ClipboardList },
             { id: 'settings', label: 'Config.', icon: Settings2 },
+            { id: 'team', label: 'Equipo', icon: UsersRound },
           ] as const
         ).map(({ id, label, icon: Icon }) => (
           <button

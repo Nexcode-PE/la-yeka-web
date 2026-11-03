@@ -72,4 +72,14 @@ export type StoreSettings = {
   updatedAt: string;
 };
 
-export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings';
+export type AdminUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  role: 'ADMIN';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings' | 'team';

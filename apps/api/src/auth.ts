@@ -23,7 +23,7 @@ export async function requireUser(token?: string) {
     const verified = await jwtVerify(token.replace(/^Bearer\s+/i, ''), key())
     if (!verified.payload.sub) return null
     const user = await db.user.findUnique({ where: { id: verified.payload.sub } })
-    return user ? publicUser(user) : null
+    return user?.isActive ? publicUser(user) : null
   } catch {
     return null
   }
@@ -36,7 +36,7 @@ export async function requireAdmin(token?: string) {
 
 export async function login(email: string, password: string) {
   const user = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } })
-  if (!user?.passwordHash || !(await argon2.verify(user.passwordHash, password))) return null
+  if (!user?.isActive || !user.passwordHash || !(await argon2.verify(user.passwordHash, password))) return null
   const publicProfile = publicUser(user)
   return { user: publicProfile, token: await signSession(publicProfile) }
 }

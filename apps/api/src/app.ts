@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { put } from '@vercel/blob'
 import { z } from 'zod'
+import argon2 from 'argon2'
 import { db } from '../../../packages/database/src/client.js'
 import { login, registerCustomer, requireAdmin, requireUser } from './auth.js'
 
@@ -43,6 +44,10 @@ app.get('/orders/me', async (c) => {
   }))
 })
 app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.product.findMany({ include:{category:true},orderBy:[{category:{position:'asc'}},{position:'asc'}] })) })
+app.get('/admin/team', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  return c.json(await db.user.findMany({ where:{role:'ADMIN'}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true}, orderBy:{createdAt:'asc'} }))
+})
 app.get('/admin/settings', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })) })
 app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
 app.get('/admin/dashboard', async (c) => {
@@ -81,6 +86,29 @@ const productInput = z.object({
   name:z.string().trim().min(2).max(100), description:z.string().trim().max(500).nullable().optional(),
   price:z.number().positive().max(999), categoryId:z.string().uuid().nullable().optional(), imagePath:z.string().url().nullable().optional(),
   isAvailable:z.boolean().optional(), isFeatured:z.boolean().optional(), position:z.number().int().min(0).optional(),
+})
+const adminUserInput = z.object({ name:z.string().trim().min(2).max(100), email:z.string().email(), password:z.string().min(10).max(128) })
+const adminUserUpdate = z.object({ name:z.string().trim().min(2).max(100).optional(), password:z.string().min(10).max(128).optional(), isActive:z.boolean().optional() })
+app.post('/admin/team', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const parsed = adminUserInput.safeParse(await c.req.json())
+  if (!parsed.success) return c.json({ error:'Revisa nombre, correo y contraseña (mínimo 10 caracteres).' },400)
+  try {
+    const user = await db.user.create({ data:{name:parsed.data.name,email:parsed.data.email.trim().toLowerCase(),passwordHash:await argon2.hash(parsed.data.password),role:'ADMIN'}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true} })
+    return c.json(user,201)
+  } catch { return c.json({ error:'Ya existe una cuenta con este correo.' },409) }
+})
+app.patch('/admin/team/:id', async (c) => {
+  const admin = await requireAdmin(c.req.header('authorization')
+  ); if (!admin) return c.json({ error:'No autorizado' },401)
+  const parsed = adminUserUpdate.safeParse(await c.req.json())
+  if (!parsed.success || Object.keys(parsed.data).length === 0) return c.json({ error:'Datos inválidos. La contraseña debe tener al menos 10 caracteres.' },400)
+  const id = c.req.param('id')
+  if (id === admin.id && parsed.data.isActive === false) return c.json({ error:'No puedes desactivar tu propia cuenta.' },400)
+  try {
+    const { password, ...data } = parsed.data
+    return c.json(await db.user.update({ where:{id}, data:{...data, ...(password ? {passwordHash:await argon2.hash(password)} : {})}, select:{id:true,name:true,email:true,role:true,isActive:true,createdAt:true,updatedAt:true} }))
+  } catch { return c.json({ error:'Cuenta administrativa no encontrada.' },404) }
 })
 const storeSettingsInput = z.object({
   businessName:z.string().trim().min(2).max(80), whatsapp:z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/),
