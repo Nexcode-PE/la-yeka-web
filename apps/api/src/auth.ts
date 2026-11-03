@@ -17,6 +17,25 @@ export async function signSession(user: PublicUser) {
     .sign(key())
 }
 
+export async function createGoogleState(returnTo: string) {
+  if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET no configurado')
+  return new SignJWT({ returnTo, purpose: 'google_oauth' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('10m')
+    .sign(key())
+}
+
+export async function verifyGoogleState(state: string) {
+  if (!process.env.JWT_SECRET) return null
+  try {
+    const verified = await jwtVerify(state, key())
+    return verified.payload.purpose === 'google_oauth' && typeof verified.payload.returnTo === 'string' ? verified.payload.returnTo : null
+  } catch {
+    return null
+  }
+}
+
 export async function requireUser(token?: string) {
   if (!token || !process.env.JWT_SECRET) return null
   try {
@@ -56,6 +75,17 @@ export async function registerCustomer(name: string, email: string, password: st
       role: 'CUSTOMER',
     },
   })
+  const publicProfile = publicUser(user)
+  return { user: publicProfile, token: await signSession(publicProfile) }
+}
+
+export async function loginWithGoogle(profile: { sub: string; email: string; emailVerified: boolean; name?: string }) {
+  if (!profile.emailVerified) return { error: 'Google no confirmó el correo de esta cuenta.' as const }
+  const email = profile.email.trim().toLowerCase()
+  const existing = await db.user.findFirst({ where: { OR: [{ googleId: profile.sub }, { email }] } })
+  const user = existing
+    ? await db.user.update({ where: { id: existing.id }, data: { googleId: profile.sub, name: existing.name || profile.name || null } })
+    : await db.user.create({ data: { email, googleId: profile.sub, name: profile.name || null, role: 'CUSTOMER' } })
   const publicProfile = publicUser(user)
   return { user: publicProfile, token: await signSession(publicProfile) }
 }

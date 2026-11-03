@@ -39,6 +39,19 @@ function App() {
   const burgerBuildTimeout = useRef<number | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const token = params.get('google_token');
+    const error = params.get('google_error');
+    if (!token && !error) return;
+    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    if (token) {
+      sessionStorage.setItem('la-yeka-user-token', token);
+      setAuthToken(token);
+      setDialog(null);
+    }
+    if (error) { setAuthError(error); setDialog('account'); }
+  }, []);
+  useEffect(() => {
     const base = apiBase;
     if (base === null) { setCatalogState('error'); return; }
     fetch(base + '/api/catalog')
@@ -176,6 +189,11 @@ function App() {
     setAccountName(body.user.name || body.user.email);
     setCustomerName(body.user.name || ''); setCustomerPhone(body.user.phone || ''); setAddress(body.user.deliveryAddress || ''); setDistrict(body.user.district || store.district || 'Chincha Alta');
     setDialog(null);
+  };
+  const continueWithGoogle = () => {
+    const api = apiBase;
+    if (api === null) { setAuthError('El acceso con Google estará disponible al conectar la API.'); return; }
+    window.location.assign(`${api}/api/auth/google?returnTo=${encodeURIComponent(window.location.origin)}`);
   };
   return (
     <>
@@ -650,6 +668,8 @@ function App() {
                     <label className="wide">Contraseña<input name="password" type="password" required minLength={10} autoComplete={accountMode === 'login' ? 'current-password' : 'new-password'} /></label>
                     {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
                     <button className="checkout wide" type="submit">{accountMode === 'login' ? 'Ingresar a mi cuenta' : 'Crear cuenta segura'}</button>
+                    <div className="wide flex items-center gap-3 text-xs text-stone-400 before:h-px before:flex-1 before:bg-stone-200 after:h-px after:flex-1 after:bg-stone-200">o</div>
+                    <button className="google-login wide" type="button" onClick={continueWithGoogle}><span aria-hidden="true">G</span> Continuar con Google</button>
                     <button className="wide border-0 bg-transparent text-sm font-bold underline" type="button" onClick={() => { setAuthError(''); setAccountMode(accountMode === 'login' ? 'register' : 'login'); }}>{accountMode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}</button>
                   </form>
                 )}

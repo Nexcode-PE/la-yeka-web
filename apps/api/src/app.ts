@@ -4,7 +4,7 @@ import { put } from '@vercel/blob'
 import { z } from 'zod'
 import argon2 from 'argon2'
 import { db } from '../../../packages/database/src/client.js'
-import { login, registerCustomer, requireAdmin, requireUser } from './auth.js'
+import { createGoogleState, login, loginWithGoogle, registerCustomer, requireAdmin, requireUser, verifyGoogleState } from './auth.js'
 
 const app = new Hono().basePath('/api')
 const writeAudit = async (admin: { id:string }, action:string, entityType:string, entityId?:string, detail?:string) => {
@@ -12,6 +12,14 @@ const writeAudit = async (admin: { id:string }, action:string, entityType:string
 }
 const sessionsEnabled = () => Boolean(process.env.JWT_SECRET)
 const allowedOrigins = [process.env.CLIENT_ORIGIN, process.env.ADMIN_ORIGIN].filter(Boolean) as string[]
+const clientOrigin = () => process.env.CLIENT_ORIGIN || 'http://localhost:5173'
+const validReturnTo = (candidate?: string) => {
+  try {
+    const url = new URL(candidate || clientOrigin())
+    return url.origin === clientOrigin() ? url.origin : clientOrigin()
+  } catch { return clientOrigin() }
+}
+const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI)
 app.use('*', cors({
   origin: (origin) => {
     if (!origin) return allowedOrigins[0] || '*'
@@ -34,6 +42,33 @@ app.post('/auth/register', async (c) => {
   if (!data.success) return c.json({ error:'Revisa los datos de registro. La contraseña debe tener al menos 10 caracteres.' },400)
   const session = await registerCustomer(data.data.name, data.data.email, data.data.password, data.data.phone, data.data.deliveryAddress, data.data.district)
   return 'error' in session ? c.json(session,409) : c.json(session,201)
+})
+app.get('/auth/google', async (c) => {
+  if (!sessionsEnabled() || !googleConfigured()) return c.json({ error: 'El acceso con Google aún no está configurado.' }, 503)
+  const returnTo = validReturnTo(c.req.query('returnTo'))
+  const state = await createGoogleState(returnTo)
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
+  url.search = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, response_type: 'code', scope: 'openid email profile', state, prompt: 'select_account' }).toString()
+  return c.redirect(url.toString())
+})
+app.get('/auth/google/callback', async (c) => {
+  const state = c.req.query('state') || ''
+  const returnTo = await verifyGoogleState(state)
+  const destination = validReturnTo(returnTo || undefined)
+  const fail = (reason: string) => c.redirect(`${destination}#google_error=${encodeURIComponent(reason)}`)
+  const code = c.req.query('code')
+  if (!code || !returnTo || !googleConfigured()) return fail('No se pudo completar el acceso con Google.')
+  try {
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, grant_type: 'authorization_code' }) })
+    const token = await tokenResponse.json().catch(() => null) as { access_token?: string } | null
+    if (!tokenResponse.ok || !token?.access_token) return fail('Google no autorizó el acceso.')
+    const userResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${token.access_token}` } })
+    const profile = await userResponse.json().catch(() => null) as { sub?: string; email?: string; email_verified?: boolean; name?: string } | null
+    if (!userResponse.ok || !profile?.sub || !profile.email) return fail('No se pudo leer el perfil de Google.')
+    const session = await loginWithGoogle({ sub: profile.sub, email: profile.email, emailVerified: Boolean(profile.email_verified), name: profile.name })
+    if ('error' in session && session.error) return fail(session.error)
+    return c.redirect(`${destination}#google_token=${encodeURIComponent(session.token)}`)
+  } catch { return fail('No se pudo conectar con Google. Inténtalo nuevamente.') }
 })
 app.get('/auth/me', async (c) => { const user = await requireUser(c.req.header('authorization')); return user ? c.json({ user }) : c.json({ error:'No autorizado' },401) })
 app.patch('/auth/profile', async (c) => {

@@ -10,6 +10,7 @@ model User {
   id        String   @id @default(uuid()) @db.Uuid
   name      String?
   email     String   @unique
+  googleId  String?  @unique @map("google_id")
   phone     String?
   deliveryAddress String? @map("delivery_address")
   district  String?

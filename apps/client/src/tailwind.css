@@ -144,6 +144,8 @@
   .total strong { @apply font-mono text-xl; }
   .checkout { @apply w-full justify-center border-0; }
   .checkout:disabled { @apply cursor-not-allowed opacity-50 hover:translate-y-0; }
+  .google-login { @apply flex items-center justify-center gap-3 rounded border border-stone-300 bg-white px-4 py-3 text-sm font-extrabold text-yeka-ink transition hover:border-yeka-gold hover:bg-[#fffaf0]; }
+  .google-login span { @apply grid size-6 place-items-center rounded-full bg-white text-base font-black text-[#4285f4] shadow-sm; }
   .secure { @apply mt-3 flex items-center justify-center gap-1 text-center text-[11px] text-stone-500; }
   .modal { @apply fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6; }
   .modal-card { @apply relative max-h-[91vh] w-full overflow-y-auto border-t-[7px] border-yeka-gold bg-gradient-to-br from-white via-white to-[#fff7e8] p-[34px_22px_26px] sm:max-w-[620px] sm:rounded sm:p-10; }
