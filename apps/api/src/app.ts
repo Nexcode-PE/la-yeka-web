@@ -20,6 +20,17 @@ const validReturnTo = (candidate?: string) => {
   } catch { return clientOrigin() }
 }
 const googleConfigured = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI)
+type RateBucket = { count: number; resetAt: number }
+const rateBuckets = new Map<string, RateBucket>()
+const enforceRateLimit = (c: { req: { header: (name: string) => string | undefined } }, scope: string, max: number, windowMs: number) => {
+  const address = (c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown').split(',')[0].trim()
+  const key = `${scope}:${address}`
+  const now = Date.now()
+  const bucket = rateBuckets.get(key)
+  if (!bucket || bucket.resetAt <= now) { rateBuckets.set(key, { count: 1, resetAt: now + windowMs }); return false }
+  bucket.count += 1
+  return bucket.count > max
+}
 app.use('*', cors({
   origin: (origin) => {
     if (!origin) return allowedOrigins[0] || '*'
@@ -28,6 +39,13 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
+app.use('*', async (c, next) => {
+  await next()
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+})
 app.get('/health', (c) => c.json({ ok: true }))
 const defaultStoreSettings = {
   id:'main', businessName:'La Yeka', whatsapp:'51974121550', address:'Calle Mariscal Benavides 150, Chincha Alta',
@@ -35,8 +53,9 @@ const defaultStoreSettings = {
 }
 app.get('/settings', async (c) => c.json(await db.storeSettings.upsert({ where:{id:'main'}, update:{}, create:defaultStoreSettings })))
 app.get('/catalog', async (c) => c.json(await db.category.findMany({ where:{ isAvailable:true }, orderBy: { position: 'asc' }, include: { products: { where: { isAvailable: true }, orderBy: { position: 'asc' } } } })))
-app.post('/auth/login', async (c) => { if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503); const data = z.object({ email:z.string().email(), password:z.string().min(10) }).safeParse(await c.req.json()); if (!data.success) return c.json({ error:'Credenciales inválidas' },400); const session=await login(data.data.email,data.data.password); return session ? c.json(session) : c.json({ error:'Correo o contraseña incorrectos' },401) })
+app.post('/auth/login', async (c) => { if (enforceRateLimit(c, 'login', 5, 15 * 60 * 1000)) return c.json({ error:'Demasiados intentos. Espera 15 minutos antes de volver a intentarlo.' },429); if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503); const data = z.object({ email:z.string().email(), password:z.string().min(10) }).safeParse(await c.req.json()); if (!data.success) return c.json({ error:'Credenciales inválidas' },400); const session=await login(data.data.email,data.data.password); return session ? c.json(session) : c.json({ error:'Correo o contraseña incorrectos' },401) })
 app.post('/auth/register', async (c) => {
+  if (enforceRateLimit(c, 'register', 5, 60 * 60 * 1000)) return c.json({ error:'Demasiados registros desde esta conexión. Inténtalo más tarde.' },429)
   if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503)
   const data = z.object({ name:z.string().trim().min(2).max(100), email:z.string().email(), password:z.string().min(10).max(128), phone:z.string().trim().min(7).max(25).optional(), deliveryAddress:z.string().trim().min(5).max(200).optional(), district:z.string().trim().min(2).max(100).optional() }).safeParse(await c.req.json())
   if (!data.success) return c.json({ error:'Revisa los datos de registro. La contraseña debe tener al menos 10 caracteres.' },400)
@@ -338,6 +357,7 @@ const orderInput = z.object({
   items:z.array(z.object({ productId:z.string().uuid(), quantity:z.number().int().min(1).max(20) })).min(1),
 }).superRefine((data, context) => { if (data.fulfillment === 'DELIVERY' && (!data.address || !data.district)) context.addIssue({ code:'custom', message:'Indica dirección y distrito para el delivery.' }); if (data.paymentMethod === 'YAPE' && !data.paymentReference) context.addIssue({ code:'custom', message:'Indica el código de operación Yape.' }) })
 app.post('/orders', async (c) => {
+  if (enforceRateLimit(c, 'orders', 20, 10 * 60 * 1000)) return c.json({ error:'Demasiados pedidos en poco tiempo. Espera unos minutos.' },429)
   const parsed = orderInput.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Datos inválidos' },400)
   const ids = parsed.data.items.map((item) => item.productId); const products = await db.product.findMany({ where:{ id:{ in:ids }, isAvailable:true } }); if (products.length !== ids.length) return c.json({ error:'Producto no disponible' },409)
   const byId = new Map(products.map((product) => [product.id, product])); const total = parsed.data.items.reduce((sum,item) => sum + Number(byId.get(item.productId)!.price) * item.quantity,0)
@@ -346,5 +366,5 @@ app.post('/orders', async (c) => {
   return c.json({ id:order.id, orderNumber:order.orderNumber, paymentToken:order.paymentToken, total },201)
 })
 const claimInput=z.object({ customerName:z.string().min(2),document:z.string().min(4),email:z.string().email(),phone:z.string().min(6),kind:z.enum(['COMPLAINT','SERVICE_ISSUE']),orderReference:z.string().optional(),detail:z.string().min(10),requestedSolution:z.string().min(5) })
-app.post('/claims', async(c)=>{const parsed=claimInput.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Datos inválidos'},400);const claim=await db.claim.create({data:parsed.data});return c.json({id:claim.id},201)})
+app.post('/claims', async(c)=>{if(enforceRateLimit(c,'claims',5,60*60*1000))return c.json({error:'Demasiados registros desde esta conexión. Inténtalo más tarde.'},429);const parsed=claimInput.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Datos inválidos'},400);const claim=await db.claim.create({data:parsed.data});return c.json({id:claim.id},201)})
 export default app
