@@ -829,7 +829,7 @@ function Admin() {
           </div>
         )}
         {view === 'orders' && (
-          <div className="grid gap-4 xl:grid-cols-4">
+          <div className="order-board">
             {loading ? <div className="xl:col-span-4"><ContentSkeleton /></div> : orders.length === 0 ? (
               <div className="xl:col-span-4">
                 <Empty text="Aún no hay pedidos registrados." />
@@ -838,54 +838,56 @@ function Admin() {
               operationColumns.map((column) => (
                 <section
                   key={column.title}
-                  className={`rounded-2xl border-t-4 ${column.tone} bg-stone-100/70 p-3`}
+                  className={`order-column border-t-4 ${column.tone}`}
                 >
-                  <div className="mb-3 flex items-center justify-between px-2">
-                    <h3 className="font-black">{column.title}</h3>
-                    <span className="rounded-full bg-white px-2 py-1 text-xs font-bold">
+                  <div className="order-column-header">
+                    <div><p className="order-column-label">OPERACIÓN</p><h3>{column.title}</h3></div>
+                    <span className="order-column-count">
                       {column.orders.length}
                     </span>
                   </div>
                   <div className="grid gap-3">
                     {column.orders.map((order) => (
-                      <article className="rounded-xl bg-white p-4 shadow-sm" key={order.id}>
+                      <article className="order-card admin-card-motion" key={order.id}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <p className="font-black">
+                              <p className="truncate font-black text-slate-950">
                                 {order.customerName || 'Cliente sin nombre'} · S/{' '}
                                 {Number(order.total).toFixed(2)}
                               </p>
-                              <span className="font-mono text-[10px] text-stone-400">
+                              <span className="shrink-0 font-mono text-[10px] text-slate-400">
                                 YEKA-{String(order.orderNumber).padStart(6, '0')}
                               </span>
                             </div>
-                            <p className="mt-1 text-sm text-stone-500">
+                            <p className="mt-1 text-xs text-stone-500">
                               {order.customerPhone} ·{' '}
                               {new Date(order.createdAt).toLocaleString('es-PE')}
                             </p>
-                            <p className="mt-2 text-xs font-bold text-amber-700">
-                              {labels[order.fulfillment]} · {labels[order.paymentMethod]} · Pago {labels[order.paymentStatus]}
+                            <p className="order-card-badges">
+                              <span>{labels[order.fulfillment]}</span><span>{labels[order.paymentMethod]}</span><span className={order.paymentStatus === 'VERIFIED' ? 'is-verified' : order.paymentStatus === 'REJECTED' ? 'is-rejected' : 'is-pending'}>Pago {labels[order.paymentStatus]}</span>
                             </p>
                             {order.fulfillment === 'DELIVERY' && (
                               <p className="mt-1 text-xs text-stone-500">
                                 {order.address} · {order.district}
                               </p>
                             )}
-                            <p className="mt-3 text-sm">
+                            <p className="mt-3 border-t border-slate-100 pt-3 text-sm font-medium text-slate-700">
                               {order.items
                                 .map((item) => `${item.quantity}× ${item.productName}`)
                                 .join(', ')}
                             </p>
-                            <div className="mt-3 grid gap-2 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                            <div className="order-payment">
+                              <div className="mb-2 flex items-center justify-between gap-2"><p>Control de pago</p>{order.paymentProofUrl && <a href={order.paymentProofUrl} target="_blank" rel="noreferrer">Ver voucher Yape</a>}</div>
+                              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
                               <input aria-label={`Referencia de pago de pedido ${order.orderNumber}`} value={paymentReferences[order.id] ?? ''} onChange={(event) => setPaymentReferences((current) => ({...current,[order.id]:event.target.value}))} placeholder={order.paymentMethod === 'YAPE' ? 'Código Yape' : 'Referencia opcional'} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#4169ff]" />
                               <select aria-label="Estado de pago" value={paymentStatuses[order.id] || order.paymentStatus} onChange={(event) => setPaymentStatuses((current) => ({...current,[order.id]:event.target.value as Order['paymentStatus']}))} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold outline-none focus:border-[#4169ff]"><option value="PENDING">Pendiente</option><option value="VERIFIED">Validado</option><option value="REJECTED">Rechazado</option></select>
                               <button onClick={() => void savePayment(order)} disabled={savingId === order.id} className="h-9 rounded-md border border-[#aebdff] bg-white px-3 text-xs font-bold text-[#3156d8] hover:bg-[#eef2ff] disabled:opacity-50">Guardar pago</button>
+                              </div>
                             </div>
-                            {order.paymentProofUrl && <a href={order.paymentProofUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-bold text-[#3156d8] underline underline-offset-2">Ver voucher Yape</a>}
                             {order.statusEvents.length > 0 && <details className="mt-3 text-xs"><summary className="cursor-pointer font-bold text-slate-600">Historial de estado ({order.statusEvents.length})</summary><ol className="mt-2 grid gap-1 border-l border-slate-200 pl-3">{order.statusEvents.map((event) => <li key={event.id}><span className="font-semibold">{event.fromStatus ? `${labels[event.fromStatus]} → ` : ''}{labels[event.toStatus]}</span>{event.reason ? ` · ${event.reason}` : ''}<span className="text-slate-400"> · {new Date(event.createdAt).toLocaleString('es-PE')}{event.changedBy ? ` · ${event.changedBy.name || event.changedBy.email}` : ''}</span></li>)}</ol></details>}
                           </div>
-                          <div className="grid w-full gap-2 sm:w-auto">
+                          <div className="order-actions">
                             <Status
                               value={order.status}
                               options={statusOptions.orders}
