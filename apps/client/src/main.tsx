@@ -454,18 +454,15 @@ function App() {
                   ))}
                 </div>
                 <ExtrasPicker extras={extras} onAdd={add} />
-                {authToken ? (
-                  <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
-                    {hasSavedContact ? <><b className="block text-yeka-ink">Pedido para {customerName}</b><span>{customerPhone} · {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}</span></> : <><b className="block text-yeka-ink">Completa tus datos de pedido</b><span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span></>}
-                    <button className="mt-2 text-xs font-bold text-yeka-gold underline" onClick={() => { setAuthError(''); setDialog('account'); }}>{hasSavedContact ? 'Editar mis datos' : 'Completar mi perfil'}</button>
-                  </div>
-                ) : <><input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" /></>}
+                <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+                  {!authToken ? <><b className="block text-yeka-ink">Inicia sesión para continuar</b><span>Guardaremos tus datos una sola vez para tus próximos pedidos.</span></> : hasSavedContact ? <><b className="block text-yeka-ink">Pedido para {customerName}</b><span>{customerPhone} · {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}</span></> : <><b className="block text-yeka-ink">Completa tus datos de pedido</b><span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span></>}
+                  <button className="mt-2 text-xs font-bold text-yeka-gold underline" onClick={() => { setAuthError(''); setDialog('account'); }}>{!authToken ? 'Iniciar sesión o crear cuenta' : hasSavedContact ? 'Editar mis datos' : 'Completar mi perfil'}</button>
+                </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option></select>
                 </div>
                 {paymentMethod === 'YAPE' && <div className="mt-2 grid gap-2"><input className="w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" /><label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">Voucher Yape<input className="mt-2 block w-full text-xs font-normal" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} /><span className="mt-1 block text-xs font-normal text-stone-500">{paymentProof ? `Adjunto: ${paymentProof.name}` : 'JPG, PNG o WEBP; máximo 4 MB.'}</span></label></div>}
-                {fulfillment === 'DELIVERY' && !authToken && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -475,7 +472,7 @@ function App() {
                   <span>Total</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
+                <button className="checkout" onClick={send} disabled={!authToken || sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
                   {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'} <ChevronRight size={19} />
                 </button>
                 <p className="secure">
