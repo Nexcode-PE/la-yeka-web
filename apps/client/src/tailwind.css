@@ -152,6 +152,21 @@
   .modal-card > .close { @apply absolute top-3 right-3; }
   .modal-card h2 { @apply mb-5 font-display text-[clamp(32px,7vw,48px)] leading-none tracking-[-2px]; }
   .modal-lead { @apply mb-6 text-sm leading-relaxed text-stone-600; }
+  .account-content { display: block; width: 100%; }
+  .account-profile { width: 100%; border: 1px solid #e7e0d7; border-radius: 12px; background: #fffaf0; padding: 18px; }
+  .account-profile .eyebrow { margin-bottom: 5px; font-size: 9px; }
+  .account-profile h3, .account-orders h3 { margin: 0; font-size: 17px; font-weight: 800; }
+  .account-profile-form { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+  .account-profile-form label { display: grid; min-width: 0; gap: 6px; font-size: 12px; font-weight: 800; }
+  .account-profile-form .wide { grid-column: 1 / -1; }
+  .account-profile-form input { width: 100%; min-width: 0; border: 1px solid #d6cec4; border-radius: 6px; background: white; padding: 11px 12px; font-size: 14px; font-weight: 400; outline: none; }
+  .account-profile-form input:focus { border-color: #f7ad22; }
+  .account-save { grid-column: 1 / -1; width: 100%; border: 0; border-radius: 6px; background: #f7ad22; padding: 13px 16px; font-weight: 800; color: #050505; }
+  .account-orders { width: 100%; margin-top: 22px; border-top: 1px solid #e7e0d7; padding-top: 20px; }
+  .account-orders > p { margin-top: 9px; }
+  .account-orders article { margin-top: 10px; }
+  .account-logout { width: 100%; margin-top: 20px; border: 1px solid #d6cec4; border-radius: 6px; background: white; padding: 12px 16px; font-weight: 800; color: #3f342a; }
+  .account-logout:hover { border-color: #c64747; color: #a92b2b; }
   .legal-copy { @apply border-t border-stone-200 pt-3; }
   .legal-copy p { @apply mb-0 border-b border-stone-200 py-3 text-sm leading-relaxed text-stone-600; }
   .claim-form { @apply grid grid-cols-1 gap-4 sm:grid-cols-2; }
@@ -186,6 +201,11 @@
   .filters button:hover, .cart-button:hover, .account-button:hover, .primary:hover, .checkout:hover { transform: translateY(-2px); }
   .panel { animation: yeka-drawer-in .28s cubic-bezier(.2,.8,.2,1) both; }
   .modal-card { animation: yeka-modal-in .25s cubic-bezier(.2,.8,.2,1) both; }
+}
+
+@media (max-width: 520px) {
+  .account-profile-form { grid-template-columns: 1fr; }
+  .account-profile-form .wide { grid-column: auto; }
 }
 
 @keyframes ingredient-drop {

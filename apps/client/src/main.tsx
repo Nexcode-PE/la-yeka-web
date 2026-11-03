@@ -639,27 +639,29 @@ function App() {
                 <p className="eyebrow">MI CUENTA</p>
                 <h2>{accountName ? `Hola, ${accountName}` : accountMode === 'login' ? 'Inicia sesión' : 'Crea tu cuenta'}</h2>
                 {accountName ? (
-                  <div className="grid gap-4">
+                  <div className="account-content">
                     <p className="modal-lead">Tus datos se usan automáticamente cuando haces un pedido.</p>
-                    <form className="claim-form" onSubmit={(event) => { event.preventDefault(); updateProfile(event.currentTarget).catch(() => setAuthError('No se pudieron guardar tus datos.')); }}>
-                      <h3 className="wide mb-0 text-base font-extrabold">Datos de entrega</h3>
+                    <section className="account-profile">
+                      <div><p className="eyebrow">PERFIL DE ENTREGA</p><h3>Datos de entrega</h3></div>
+                      <form className="account-profile-form" onSubmit={(event) => { event.preventDefault(); updateProfile(event.currentTarget).catch(() => setAuthError('No se pudieron guardar tus datos.')); }}>
                       <label>Nombre completo<input name="name" required minLength={2} defaultValue={customerName} /></label>
                       <label>Celular<input name="phone" required minLength={7} type="tel" defaultValue={customerPhone} /></label>
                       <label className="wide">Dirección de entrega<input name="deliveryAddress" required minLength={5} defaultValue={address} /></label>
                       <label className="wide">Distrito<input name="district" required minLength={2} defaultValue={district} /></label>
                       {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
-                      <button className="checkout wide" type="submit">Guardar mis datos</button>
-                    </form>
-                    <div className="grid gap-2">
-                      <h3 className="mb-0 text-base font-extrabold">Pedidos recientes</h3>
+                      <button className="account-save wide" type="submit">Guardar mis datos</button>
+                      </form>
+                    </section>
+                    <section className="account-orders">
+                      <h3>Pedidos recientes</h3>
                       {orderHistory.length === 0 ? <p className="mb-0 text-sm text-stone-500">Aún no tienes pedidos registrados.</p> : orderHistory.map((order) => (
                         <article className="rounded border border-stone-200 p-3 text-sm" key={order.id}>
                           <div className="flex items-center justify-between gap-3"><strong>YEKA-{String(order.orderNumber).padStart(6, '0')} · S/ {Number(order.total).toFixed(2)}</strong><span className="text-xs text-stone-500">{order.status}</span></div>
                           <p className="mt-1 mb-0 text-xs text-stone-500">{order.items.map((item) => item.quantity + '× ' + item.productName).join(', ')}</p>
                         </article>
                       ))}
-                    </div>
-                    <button className="checkout" onClick={() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); }}>Cerrar sesión</button>
+                    </section>
+                    <button className="account-logout" onClick={() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); }}>Cerrar sesión</button>
                   </div>
                 ) : (
                   <form className="claim-form" onSubmit={(event) => { event.preventDefault(); submitAccount(event.currentTarget).catch(() => setAuthError('No se pudo completar la operación.')); }}>
