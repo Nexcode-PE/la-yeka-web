@@ -13,3 +13,17 @@
   button { cursor: pointer; }
   button:disabled { cursor: not-allowed; }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .admin-shell-enter { animation: admin-page-in .35s ease-out both; }
+  .admin-card-motion { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .admin-card-motion:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(15, 23, 42, .08); }
+  .admin-nav-item { transition: background-color .16s ease, color .16s ease, transform .16s ease; }
+  .admin-nav-item:hover { transform: translateX(2px); }
+}
+
+@keyframes admin-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell-enter, .admin-card-motion, .admin-nav-item { animation: none !important; transition: none !important; }
+}

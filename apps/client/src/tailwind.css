@@ -160,6 +160,19 @@
   .burger-bottom { @apply top-[62px] h-3.5 w-[74px] rounded-b-[999px] bg-[#c76f28]; }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  header { animation: yeka-nav-in .45s ease-out both; }
+  .hero-copy { animation: yeka-rise .65s .08s cubic-bezier(.2,.8,.2,1) both; }
+  .featured-card, .product { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  .featured-card:hover, .product:hover { transform: translateY(-5px); box-shadow: 0 14px 25px rgba(0,0,0,.1); }
+  .featured-card img, .product-art img { transition: transform .35s ease; }
+  .featured-card:hover img, .product:hover .product-art img { transform: scale(1.045); }
+  .filters button, .cart-button, .account-button, .primary, .checkout { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, color .18s ease; }
+  .filters button:hover, .cart-button:hover, .account-button:hover, .primary:hover, .checkout:hover { transform: translateY(-2px); }
+  .panel { animation: yeka-drawer-in .28s cubic-bezier(.2,.8,.2,1) both; }
+  .modal-card { animation: yeka-modal-in .25s cubic-bezier(.2,.8,.2,1) both; }
+}
+
 @keyframes ingredient-drop {
   from { opacity: 0; transform: translate(-50%, -34px) rotate(-8deg) scale(.8); }
   to { opacity: 1; transform: translate(-50%, 0) rotate(0) scale(1); }
@@ -173,6 +186,10 @@
   0%, 100% { transform: scale(1); }
   45% { transform: scale(1.12); }
 }
+@keyframes yeka-nav-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes yeka-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes yeka-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes yeka-modal-in { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .burger-build, .burger-layer, .cart-pulse { animation: none !important; }
+  .burger-build, .burger-layer, .cart-pulse, header, .hero-copy, .panel, .modal-card { animation: none !important; }
 }

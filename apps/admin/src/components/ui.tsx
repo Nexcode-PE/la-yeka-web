@@ -3,7 +3,7 @@ import { labels } from '../lib/admin-config';
 
 export function Stat({ value, label, tone = 'amber', compact = false }: { value: number | string; label: string; tone?: 'amber' | 'green' | 'gray'; compact?: boolean }) {
   const accents = { amber: 'bg-[#4169ff]', green: 'bg-emerald-500', gray: 'bg-slate-300' };
-  return <article className={`relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30 ${compact ? 'p-3' : 'p-5'}`}><span className={`absolute inset-y-0 left-0 w-1 ${accents[tone]}`} /><strong className={`block font-bold tracking-tight ${compact ? 'text-2xl' : 'text-3xl'}`}>{value}</strong><span className={`block text-slate-500 ${compact ? 'mt-0.5 text-xs' : 'mt-1 text-sm'}`}>{label}</span></article>;
+  return <article className={`admin-card-motion relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30 ${compact ? 'p-3' : 'p-5'}`}><span className={`absolute inset-y-0 left-0 w-1 ${accents[tone]}`} /><strong className={`block font-bold tracking-tight ${compact ? 'text-2xl' : 'text-3xl'}`}>{value}</strong><span className={`block text-slate-500 ${compact ? 'mt-0.5 text-xs' : 'mt-1 text-sm'}`}>{label}</span></article>;
 }
 
 export function DashboardSkeleton() {

@@ -279,7 +279,7 @@ function Admin() {
       </main>
     );
   return (
-    <main className="h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
+    <main className="admin-shell-enter h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
       <header className="sticky top-0 z-40 border-b border-amber-400/35 bg-[#101010] text-white shadow-[0_5px_18px_rgba(0,0,0,0.22)]">
         <div className="relative flex h-[68px] w-full items-center justify-between gap-3 px-4 sm:px-6">
           <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-amber-400/70 via-amber-200/20 to-transparent" />
@@ -370,7 +370,7 @@ function Admin() {
               }}
               title={sidebarCompact ? label : undefined}
               aria-label={label}
-              className={`flex h-11 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'} ${sidebarCompact ? 'justify-center xl:px-0' : ''}`}
+                className={`admin-nav-item flex h-11 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'} ${sidebarCompact ? 'justify-center xl:px-0' : ''}`}
             >
               <Icon size={18} />
               <span className={sidebarCompact ? 'xl:hidden' : ''}>{label}</span>
@@ -491,7 +491,7 @@ function Admin() {
               <div className="grid grid-cols-[repeat(auto-fill,minmax(205px,1fr))] gap-4">
                 {loading ? <div className="col-span-full"><ContentSkeleton variant="cards" /></div> : filteredProducts.map((product) => (
                   <article
-                    className="group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
+                    className="admin-card-motion group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
                     key={product.id}
                   >
                     <div className="relative grid aspect-[1.35/0.9] place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
