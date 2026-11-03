@@ -17,6 +17,7 @@ function App() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [fulfillment, setFulfillment] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
   const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [paymentReference, setPaymentReference] = useState('');
   const [address, setAddress] = useState('');
   const [district, setDistrict] = useState('Chincha Alta');
   const [sending, setSending] = useState(false);
@@ -108,13 +109,14 @@ function App() {
     let orderId = '';
     try {
       if (api !== null && cart.every((item) => item.id)) {
-        const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, fulfillment, paymentMethod, address: fulfillment === 'DELIVERY' ? address : undefined, district: fulfillment === 'DELIVERY' ? district : undefined, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
+        const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, fulfillment, paymentMethod, paymentReference: paymentMethod === 'YAPE' ? paymentReference : undefined, address: fulfillment === 'DELIVERY' ? address : undefined, district: fulfillment === 'DELIVERY' ? district : undefined, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
         if (!response.ok) throw new Error('No fue posible registrar el pedido');
-        orderId = (await response.json()).id;
+        const created = await response.json();
+        orderId = `YEKA-${String(created.orderNumber).padStart(6, '0')}`;
       }
     } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
-    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
+    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}${paymentMethod === 'YAPE' ? `%0ACódigo Yape: ${encodeURIComponent(paymentReference)}` : ''}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
     window.open(`https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
     setSending(false);
   };
@@ -438,6 +440,7 @@ function App() {
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option></select>
                 </div>
+                {paymentMethod === 'YAPE' && <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" />}
                 {fulfillment === 'DELIVERY' && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
                 <textarea
                   value={note}
@@ -448,7 +451,7 @@ function App() {
                   <span>Total</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
+                <button className="checkout" onClick={send} disabled={sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && !paymentReference.trim()) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
                   {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'} <ChevronRight size={19} />
                 </button>
                 <p className="secure">
@@ -587,7 +590,7 @@ function App() {
                       <h3 className="mb-0 text-base font-extrabold">Pedidos recientes</h3>
                       {orderHistory.length === 0 ? <p className="mb-0 text-sm text-stone-500">Aún no tienes pedidos registrados.</p> : orderHistory.map((order) => (
                         <article className="rounded border border-stone-200 p-3 text-sm" key={order.id}>
-                          <div className="flex items-center justify-between gap-3"><strong>S/ {Number(order.total).toFixed(2)}</strong><span className="text-xs text-stone-500">{order.status}</span></div>
+                          <div className="flex items-center justify-between gap-3"><strong>YEKA-{String(order.orderNumber).padStart(6, '0')} · S/ {Number(order.total).toFixed(2)}</strong><span className="text-xs text-stone-500">{order.status}</span></div>
                           <p className="mt-1 mb-0 text-xs text-stone-500">{order.items.map((item) => item.quantity + '× ' + item.productName).join(', ')}</p>
                         </article>
                       ))}

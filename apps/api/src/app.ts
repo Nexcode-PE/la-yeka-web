@@ -210,10 +210,43 @@ app.delete('/admin/categories/:id', async (c) => {
   try { await db.category.delete({where:{id}}); return c.body(null,204) }
   catch { return c.json({ error:'Categoría no encontrada.' },404) }
 })
-app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.order.findMany({ include:{items:true},orderBy:{createdAt:'desc'},take:100 })) })
+app.get('/admin/orders', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  return c.json(await db.order.findMany({
+    include:{items:true,statusEvents:{include:{changedBy:{select:{name:true,email:true}}},orderBy:{createdAt:'asc'}}},
+    orderBy:{createdAt:'desc'},take:100,
+  }))
+})
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })
-const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']) })
-app.patch('/admin/orders/:id', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed = orderStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400); return c.json(await db.order.update({ where:{ id:c.req.param('id') }, data:parsed.data })) })
+const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']), reason:z.string().trim().max(300).optional() })
+app.patch('/admin/orders/:id', async (c) => {
+  const admin = await requireAdmin(c.req.header('authorization')); if (!admin) return c.json({ error:'No autorizado' },401)
+  const parsed = orderStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400)
+  try {
+    const current = await db.order.findUniqueOrThrow({where:{id:c.req.param('id')}})
+    if (current.status === parsed.data.status) return c.json(current)
+    const order = await db.$transaction(async (tx) => {
+      const updated = await tx.order.update({where:{id:current.id},data:{status:parsed.data.status}})
+      await tx.orderStatusEvent.create({data:{orderId:current.id,fromStatus:current.status,toStatus:parsed.data.status,changedById:admin.id,reason:parsed.data.reason || `Estado actualizado a ${parsed.data.status}`}})
+      return updated
+    })
+    await writeAudit(admin,'UPDATE','ORDER',order.id,`Pedido #${order.orderNumber}: ${current.status} → ${order.status}`)
+    return c.json(order)
+  } catch { return c.json({ error:'Pedido no encontrado.' },404) }
+})
+const paymentUpdate = z.object({ status:z.enum(['PENDING','VERIFIED','REJECTED']), reference:z.string().trim().max(120).nullable().optional() })
+app.patch('/admin/orders/:id/payment', async (c) => {
+  const admin = await requireAdmin(c.req.header('authorization')); if (!admin) return c.json({ error:'No autorizado' },401)
+  const parsed = paymentUpdate.safeParse(await c.req.json()); if (!parsed.success) return c.json({error:'Datos de pago inválidos.'},400)
+  try {
+    const current = await db.order.findUniqueOrThrow({where:{id:c.req.param('id')}})
+    const reference = parsed.data.reference === undefined ? current.paymentReference : parsed.data.reference
+    if (current.paymentMethod === 'YAPE' && parsed.data.status === 'VERIFIED' && !reference) return c.json({error:'Ingresa el código de operación Yape antes de validar el pago.'},400)
+    const order = await db.order.update({where:{id:current.id},data:{paymentStatus:parsed.data.status,paymentReference:reference,paymentReviewedAt:parsed.data.status === 'PENDING' ? null : new Date()}})
+    await writeAudit(admin,'UPDATE','ORDER_PAYMENT',order.id,`Pedido #${order.orderNumber}: pago ${order.paymentStatus}`)
+    return c.json(order)
+  } catch { return c.json({ error:'Pedido no encontrado.' },404) }
+})
 const claimUpdate = z.object({
   status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']).optional(),
   adminResponse: z.string().trim().min(10).max(2000).nullable().optional(),
@@ -241,17 +274,17 @@ app.patch('/admin/claims/:id', async (c) => {
 
 const orderInput = z.object({
   customerName:z.string().min(2), customerPhone:z.string().min(6), notes:z.string().max(500).optional(),
-  fulfillment:z.enum(['DELIVERY','PICKUP']).default('DELIVERY'), paymentMethod:z.enum(['CASH','YAPE']).default('CASH'),
+  fulfillment:z.enum(['DELIVERY','PICKUP']).default('DELIVERY'), paymentMethod:z.enum(['CASH','YAPE']).default('CASH'), paymentReference:z.string().trim().max(120).optional(),
   address:z.string().trim().min(5).max(250).optional(), district:z.string().trim().min(2).max(80).optional(),
   items:z.array(z.object({ productId:z.string().uuid(), quantity:z.number().int().min(1).max(20) })).min(1),
-}).superRefine((data, context) => { if (data.fulfillment === 'DELIVERY' && (!data.address || !data.district)) context.addIssue({ code:'custom', message:'Indica dirección y distrito para el delivery.' }) })
+}).superRefine((data, context) => { if (data.fulfillment === 'DELIVERY' && (!data.address || !data.district)) context.addIssue({ code:'custom', message:'Indica dirección y distrito para el delivery.' }); if (data.paymentMethod === 'YAPE' && !data.paymentReference) context.addIssue({ code:'custom', message:'Indica el código de operación Yape.' }) })
 app.post('/orders', async (c) => {
   const parsed = orderInput.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Datos inválidos' },400)
   const ids = parsed.data.items.map((item) => item.productId); const products = await db.product.findMany({ where:{ id:{ in:ids }, isAvailable:true } }); if (products.length !== ids.length) return c.json({ error:'Producto no disponible' },409)
   const byId = new Map(products.map((product) => [product.id, product])); const total = parsed.data.items.reduce((sum,item) => sum + Number(byId.get(item.productId)!.price) * item.quantity,0)
   const user = await requireUser(c.req.header('authorization'))
-  const order = await db.order.create({ data:{ userId:user?.id, customerName:parsed.data.customerName, customerPhone:parsed.data.customerPhone, notes:parsed.data.notes, fulfillment:parsed.data.fulfillment, paymentMethod:parsed.data.paymentMethod, address:parsed.data.address, district:parsed.data.district, total, items:{ create:parsed.data.items.map((item) => { const p=byId.get(item.productId)!; return { productId:p.id, productName:p.name, unitPrice:p.price, quantity:item.quantity } }) } } })
-  return c.json({ id:order.id, total },201)
+  const order = await db.order.create({ data:{ userId:user?.id, customerName:parsed.data.customerName, customerPhone:parsed.data.customerPhone, notes:parsed.data.notes, fulfillment:parsed.data.fulfillment, paymentMethod:parsed.data.paymentMethod, paymentReference:parsed.data.paymentReference, address:parsed.data.address, district:parsed.data.district, total, items:{ create:parsed.data.items.map((item) => { const p=byId.get(item.productId)!; return { productId:p.id, productName:p.name, unitPrice:p.price, quantity:item.quantity } }) }, statusEvents:{create:{toStatus:'PENDING',reason:'Pedido creado'}} } })
+  return c.json({ id:order.id, orderNumber:order.orderNumber, total },201)
 })
 const claimInput=z.object({ customerName:z.string().min(2),document:z.string().min(4),email:z.string().email(),phone:z.string().min(6),kind:z.enum(['COMPLAINT','SERVICE_ISSUE']),orderReference:z.string().optional(),detail:z.string().min(10),requestedSolution:z.string().min(5) })
 app.post('/claims', async(c)=>{const parsed=claimInput.safeParse(await c.req.json());if(!parsed.success)return c.json({error:'Datos inválidos'},400);const claim=await db.claim.create({data:parsed.data});return c.json({id:claim.id},201)})

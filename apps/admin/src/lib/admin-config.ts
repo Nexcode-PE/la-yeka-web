@@ -4,7 +4,7 @@ export const brandLogo = '/images/logo-la-yeka-v2.png';
 export const labels: Record<string, string> = {
   PENDING: 'Pendiente', CONFIRMED: 'Confirmado', PREPARING: 'En preparación', READY: 'Listo para entrega', DELIVERED: 'Entregado', CANCELLED: 'Cancelado',
   RECEIVED: 'Recibido', IN_REVIEW: 'En revisión', RESOLVED: 'Resuelto', COMPLAINT: 'Reclamo', SERVICE_ISSUE: 'Queja',
-  DELIVERY: 'Delivery', PICKUP: 'Recojo en local', CASH: 'Efectivo', YAPE: 'Yape',
+  DELIVERY: 'Delivery', PICKUP: 'Recojo en local', CASH: 'Efectivo', YAPE: 'Yape', VERIFIED: 'Validado', REJECTED: 'Rechazado',
 };
 
 export const statusOptions = {

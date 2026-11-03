@@ -60,6 +60,8 @@ function Admin() {
     'all',
   );
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
+  const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({});
+  const [paymentStatuses, setPaymentStatuses] = useState<Record<string, Order['paymentStatus']>>({});
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -109,6 +111,10 @@ function Admin() {
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
   }, [products]);
+  useEffect(() => {
+    setPaymentReferences(Object.fromEntries(orders.map((order) => [order.id, order.paymentReference || ''])));
+    setPaymentStatuses(Object.fromEntries(orders.map((order) => [order.id, order.paymentStatus])));
+  }, [orders]);
   useEffect(() => {
     setClaimDrafts(Object.fromEntries(claims.map((claim) => [claim.id, claim.adminResponse || ''])));
   }, [claims]);
@@ -301,8 +307,16 @@ function Admin() {
     const phone = order.customerPhone?.replace(/\D/g, '');
     if (!phone) return setError('El pedido no tiene un número de celular válido.');
     const normalized = phone.startsWith('51') ? phone : `51${phone}`;
-    const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido #${order.id.slice(0, 8).toUpperCase()}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}%0A%0ATotal: S/ ${Number(order.total).toFixed(2)}%0AEstado: ${labels[order.status]}.`;
+    const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido YEKA-${String(order.orderNumber).padStart(6, '0')}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}%0A%0ATotal: S/ ${Number(order.total).toFixed(2)}%0AEstado: ${labels[order.status]}.`;
     window.open(`https://wa.me/${normalized}?text=${message}`, '_blank', 'noopener,noreferrer');
+  };
+  const savePayment = async (order: Order) => {
+    setSavingId(order.id); setError('');
+    try {
+      await request(`/admin/orders/${order.id}/payment`, { method:'PATCH', body:JSON.stringify({ status:paymentStatuses[order.id] || order.paymentStatus, reference:paymentReferences[order.id] || null }) });
+      await load(); setNotice('Información de pago actualizada.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el pago.'); }
+    finally { setSavingId(''); }
   };
   const saveClaim = async (claim: Claim, data: { status?: string; adminResponse?: string | null }) => {
     setSavingId(claim.id);
@@ -770,7 +784,7 @@ function Admin() {
                                 {Number(order.total).toFixed(2)}
                               </p>
                               <span className="font-mono text-[10px] text-stone-400">
-                                #{order.id.slice(0, 8).toUpperCase()}
+                                YEKA-{String(order.orderNumber).padStart(6, '0')}
                               </span>
                             </div>
                             <p className="mt-1 text-sm text-stone-500">
@@ -778,7 +792,7 @@ function Admin() {
                               {new Date(order.createdAt).toLocaleString('es-PE')}
                             </p>
                             <p className="mt-2 text-xs font-bold text-amber-700">
-                              {labels[order.fulfillment]} · {labels[order.paymentMethod]}
+                              {labels[order.fulfillment]} · {labels[order.paymentMethod]} · Pago {labels[order.paymentStatus]}
                             </p>
                             {order.fulfillment === 'DELIVERY' && (
                               <p className="mt-1 text-xs text-stone-500">
@@ -790,6 +804,12 @@ function Admin() {
                                 .map((item) => `${item.quantity}× ${item.productName}`)
                                 .join(', ')}
                             </p>
+                            <div className="mt-3 grid gap-2 rounded-lg border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
+                              <input aria-label={`Referencia de pago de pedido ${order.orderNumber}`} value={paymentReferences[order.id] ?? ''} onChange={(event) => setPaymentReferences((current) => ({...current,[order.id]:event.target.value}))} placeholder={order.paymentMethod === 'YAPE' ? 'Código Yape' : 'Referencia opcional'} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#4169ff]" />
+                              <select aria-label="Estado de pago" value={paymentStatuses[order.id] || order.paymentStatus} onChange={(event) => setPaymentStatuses((current) => ({...current,[order.id]:event.target.value as Order['paymentStatus']}))} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold outline-none focus:border-[#4169ff]"><option value="PENDING">Pendiente</option><option value="VERIFIED">Validado</option><option value="REJECTED">Rechazado</option></select>
+                              <button onClick={() => void savePayment(order)} disabled={savingId === order.id} className="h-9 rounded-md border border-[#aebdff] bg-white px-3 text-xs font-bold text-[#3156d8] hover:bg-[#eef2ff] disabled:opacity-50">Guardar pago</button>
+                            </div>
+                            {order.statusEvents.length > 0 && <details className="mt-3 text-xs"><summary className="cursor-pointer font-bold text-slate-600">Historial de estado ({order.statusEvents.length})</summary><ol className="mt-2 grid gap-1 border-l border-slate-200 pl-3">{order.statusEvents.map((event) => <li key={event.id}><span className="font-semibold">{event.fromStatus ? `${labels[event.fromStatus]} → ` : ''}{labels[event.toStatus]}</span>{event.reason ? ` · ${event.reason}` : ''}<span className="text-slate-400"> · {new Date(event.createdAt).toLocaleString('es-PE')}{event.changedBy ? ` · ${event.changedBy.name || event.changedBy.email}` : ''}</span></li>)}</ol></details>}
                           </div>
                           <div className="grid w-full gap-2 sm:w-auto">
                             <Status

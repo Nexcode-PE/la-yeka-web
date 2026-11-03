@@ -18,6 +18,7 @@ export type Category = {
 
 export type Order = {
   id: string;
+  orderNumber: number;
   customerName: string | null;
   customerPhone: string | null;
   total: string;
@@ -25,9 +26,12 @@ export type Order = {
   createdAt: string;
   fulfillment: 'DELIVERY' | 'PICKUP';
   paymentMethod: 'CASH' | 'YAPE';
+  paymentStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  paymentReference: string | null;
   address: string | null;
   district: string | null;
   items: Array<{ productName: string; quantity: number }>;
+  statusEvents: Array<{ id: string; fromStatus: string | null; toStatus: string; reason: string | null; createdAt: string; changedBy: { name: string | null; email: string } | null }>;
 };
 
 export type Claim = {
