@@ -12,5 +12,8 @@
     "db:migrate": "pnpm --filter @la-yeka/database migrate",
     "db:migrate:deploy": "pnpm --filter @la-yeka/database exec prisma migrate deploy",
     "db:seed": "pnpm --filter @la-yeka/database seed"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
   }
 }
