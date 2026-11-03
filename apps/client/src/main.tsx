@@ -389,7 +389,6 @@ function App() {
                 <button className="primary" onClick={() => setOpen(false)}>
                   Ver la carta
                 </button>
-                <ExtrasPicker onAdd={(extra) => add({ ...extra, detail: 'Extra para tu pedido', category: 'Complemento' })} />
               </div>
             ) : (
               <>
