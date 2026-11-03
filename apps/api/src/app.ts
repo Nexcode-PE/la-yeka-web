@@ -41,17 +41,34 @@ app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('
 app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
 app.get('/admin/dashboard', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
-  const today = new Date(); today.setHours(0,0,0,0)
-  const [todayOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
-    db.order.findMany({ where:{createdAt:{gte:today}, status:{not:'CANCELLED'}}, select:{total:true,paymentMethod:true} }),
+  const range = c.req.query('range') === 'week' ? 'week' : c.req.query('range') === 'month' ? 'month' : 'today'
+  const start = new Date()
+  start.setHours(0,0,0,0)
+  if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+  if (range === 'month') start.setDate(1)
+  const [rangeOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
+    db.order.findMany({ where:{createdAt:{gte:start}, status:{not:'CANCELLED'}}, include:{items:true} }),
     db.order.count({ where:{status:{in:['PENDING','CONFIRMED','PREPARING']}} }),
     db.product.count(), db.product.count({where:{isAvailable:true}}),
     db.order.findMany({include:{items:true},orderBy:{createdAt:'desc'},take:5}),
   ])
+  const sales = rangeOrders.reduce((total, order) => total + Number(order.total), 0)
+  const productSales = new Map<string, { quantity:number; revenue:number }>()
+  for (const order of rangeOrders) for (const item of order.items) {
+    const current = productSales.get(item.productName) || { quantity:0, revenue:0 }
+    current.quantity += item.quantity
+    current.revenue += Number(item.unitPrice) * item.quantity
+    productSales.set(item.productName, current)
+  }
+  const topProducts = [...productSales.entries()]
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a,b) => b.quantity - a.quantity || b.revenue - a.revenue)
+    .slice(0,5)
   return c.json({
-    salesToday: todayOrders.reduce((total, order) => total + Number(order.total), 0),
-    ordersToday: todayOrders.length, pending, totalProducts, availableProducts, recentOrders,
-    paymentBreakdown: Object.fromEntries(['CASH','YAPE'].map((method) => [method, todayOrders.filter((order) => order.paymentMethod === method).reduce((total, order) => total + Number(order.total), 0)])),
+    range, sales, orders:rangeOrders.length, averageTicket:rangeOrders.length ? sales / rangeOrders.length : 0,
+    pending, totalProducts, availableProducts, recentOrders, topProducts,
+    paymentBreakdown: Object.fromEntries(['CASH','YAPE'].map((method) => [method, rangeOrders.filter((order) => order.paymentMethod === method).reduce((total, order) => total + Number(order.total), 0)])),
+    statusBreakdown: Object.fromEntries(['PENDING','CONFIRMED','PREPARING','READY','DELIVERED','CANCELLED'].map((status) => [status, rangeOrders.filter((order) => order.status === status).length])),
   })
 })
 const productInput = z.object({

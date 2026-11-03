@@ -48,13 +48,17 @@ export type Claim = {
 };
 
 export type Dashboard = {
-  salesToday: number;
-  ordersToday: number;
+  range: 'today' | 'week' | 'month';
+  sales: number;
+  orders: number;
+  averageTicket: number;
   pending: number;
   totalProducts: number;
   availableProducts: number;
   recentOrders: Order[];
   paymentBreakdown: Record<string, number>;
+  statusBreakdown: Record<string, number>;
+  topProducts: Array<{ name: string; quantity: number; revenue: number }>;
 };
 
 export type View = 'dashboard' | 'products' | 'orders' | 'claims';

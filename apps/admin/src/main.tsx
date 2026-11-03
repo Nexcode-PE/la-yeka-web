@@ -43,6 +43,7 @@ function Admin() {
   const [claimFilter, setClaimFilter] = useState<'all' | 'RECEIVED' | 'IN_REVIEW' | 'RESOLVED'>('all');
   const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [productQuery, setProductQuery] = useState('');
@@ -67,7 +68,7 @@ function Admin() {
     setLoading(true);
     setError('');
     try {
-      if (view === 'dashboard') setDashboard(await request('/admin/dashboard'));
+      if (view === 'dashboard') setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
       if (view === 'products') {
         const [productData, categoryData] = await Promise.all([
           request('/admin/products'),
@@ -83,7 +84,7 @@ function Admin() {
     } finally {
       setLoading(false);
     }
-  }, [request, token, view]);
+  }, [reportRange, request, token, view]);
   useEffect(() => {
     load();
   }, [load]);
@@ -517,7 +518,7 @@ function Admin() {
             )}
           </div>
         </div>
-        {view === 'dashboard' && <DashboardPage dashboard={dashboard} loading={loading} onOrders={() => setView('orders')} />}
+        {view === 'dashboard' && <DashboardPage dashboard={dashboard} loading={loading} onOrders={() => setView('orders')} range={reportRange} onRange={setReportRange} />}
         {view === 'products' && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="mb-3 grid gap-3 sm:grid-cols-3">
