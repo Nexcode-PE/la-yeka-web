@@ -496,7 +496,7 @@ function App() {
                   ))}
                 </div>
                 <ExtrasPicker extras={extras} onAdd={add} />
-                <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+                <div className="cart-profile-summary">
                   {!authToken ? <><b className="block text-yeka-ink">Inicia sesión para continuar</b><span>Guardaremos tus datos una sola vez para tus próximos pedidos.</span></> : hasSavedContact ? <><b className="block text-yeka-ink">Pedido para {customerName}</b><span>{customerPhone} · {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}</span></> : <><b className="block text-yeka-ink">Completa tus datos de pedido</b><span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span></>}
                   <button className="mt-2 text-xs font-bold text-yeka-gold underline" onClick={() => { setAuthError(''); setDialog('account'); }}>{!authToken ? 'Iniciar sesión o crear cuenta' : hasSavedContact ? 'Editar mis datos' : 'Completar mi perfil'}</button>
                 </div>
