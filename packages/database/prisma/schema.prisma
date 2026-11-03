@@ -10,6 +10,9 @@ model User {
   id        String   @id @default(uuid()) @db.Uuid
   name      String?
   email     String   @unique
+  phone     String?
+  deliveryAddress String? @map("delivery_address")
+  district  String?
   passwordHash String? @map("password_hash")
   role      UserRole @default(CUSTOMER)
   isActive  Boolean  @default(true) @map("is_active")

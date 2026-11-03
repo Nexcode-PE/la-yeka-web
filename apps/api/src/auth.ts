@@ -3,9 +3,9 @@ import { SignJWT, jwtVerify } from 'jose'
 import { db } from '../../../packages/database/src/client.js'
 
 type Role = 'CUSTOMER' | 'ADMIN'
-type PublicUser = { id: string; name: string | null; email: string; role: Role }
+type PublicUser = { id: string; name: string | null; email: string; phone: string | null; deliveryAddress: string | null; district: string | null; role: Role }
 const key = () => new TextEncoder().encode(process.env.JWT_SECRET || '')
-const publicUser = (user: { id: string; name: string | null; email: string; role: Role }): PublicUser => ({ id: user.id, name: user.name, email: user.email, role: user.role })
+const publicUser = (user: { id: string; name: string | null; email: string; phone: string | null; deliveryAddress: string | null; district: string | null; role: Role }): PublicUser => ({ id: user.id, name: user.name, email: user.email, phone: user.phone, deliveryAddress: user.deliveryAddress, district: user.district, role: user.role })
 
 export async function signSession(user: PublicUser) {
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET no configurado')
@@ -41,7 +41,7 @@ export async function login(email: string, password: string) {
   return { user: publicProfile, token: await signSession(publicProfile) }
 }
 
-export async function registerCustomer(name: string, email: string, password: string) {
+export async function registerCustomer(name: string, email: string, password: string, phone?: string, deliveryAddress?: string, district?: string) {
   const normalizedEmail = email.trim().toLowerCase()
   const exists = await db.user.findUnique({ where: { email: normalizedEmail } })
   if (exists) return { error: 'El correo ya está registrado.' as const }
@@ -49,6 +49,9 @@ export async function registerCustomer(name: string, email: string, password: st
     data: {
       name: name.trim(),
       email: normalizedEmail,
+      phone: phone?.trim() || null,
+      deliveryAddress: deliveryAddress?.trim() || null,
+      district: district?.trim() || null,
       passwordHash: await argon2.hash(password),
       role: 'CUSTOMER',
     },

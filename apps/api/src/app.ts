@@ -30,12 +30,20 @@ app.get('/catalog', async (c) => c.json(await db.category.findMany({ where:{ isA
 app.post('/auth/login', async (c) => { if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503); const data = z.object({ email:z.string().email(), password:z.string().min(10) }).safeParse(await c.req.json()); if (!data.success) return c.json({ error:'Credenciales inválidas' },400); const session=await login(data.data.email,data.data.password); return session ? c.json(session) : c.json({ error:'Correo o contraseña incorrectos' },401) })
 app.post('/auth/register', async (c) => {
   if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503)
-  const data = z.object({ name:z.string().trim().min(2).max(100), email:z.string().email(), password:z.string().min(10).max(128) }).safeParse(await c.req.json())
+  const data = z.object({ name:z.string().trim().min(2).max(100), email:z.string().email(), password:z.string().min(10).max(128), phone:z.string().trim().min(7).max(25).optional(), deliveryAddress:z.string().trim().min(5).max(200).optional(), district:z.string().trim().min(2).max(100).optional() }).safeParse(await c.req.json())
   if (!data.success) return c.json({ error:'Revisa los datos de registro. La contraseña debe tener al menos 10 caracteres.' },400)
-  const session = await registerCustomer(data.data.name, data.data.email, data.data.password)
+  const session = await registerCustomer(data.data.name, data.data.email, data.data.password, data.data.phone, data.data.deliveryAddress, data.data.district)
   return 'error' in session ? c.json(session,409) : c.json(session,201)
 })
 app.get('/auth/me', async (c) => { const user = await requireUser(c.req.header('authorization')); return user ? c.json({ user }) : c.json({ error:'No autorizado' },401) })
+app.patch('/auth/profile', async (c) => {
+  const user = await requireUser(c.req.header('authorization'))
+  if (!user) return c.json({ error:'No autorizado' },401)
+  const data = z.object({ name:z.string().trim().min(2).max(100), phone:z.string().trim().min(7).max(25), deliveryAddress:z.string().trim().min(5).max(200), district:z.string().trim().min(2).max(100) }).safeParse(await c.req.json())
+  if (!data.success) return c.json({ error:'Completa los datos de contacto y entrega.' },400)
+  const updated = await db.user.update({ where:{id:user.id}, data:data.data })
+  return c.json({ user:{ id:updated.id, name:updated.name, email:updated.email, phone:updated.phone, deliveryAddress:updated.deliveryAddress, district:updated.district, role:updated.role } })
+})
 app.get('/orders/me', async (c) => {
   const user = await requireUser(c.req.header('authorization'))
   if (!user) return c.json({ error:'No autorizado' },401)

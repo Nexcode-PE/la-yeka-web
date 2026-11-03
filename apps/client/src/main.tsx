@@ -56,7 +56,7 @@ function App() {
       setDistrict(settings.district || 'Chincha Alta');
     }).catch(() => undefined);
   }, []);
-  useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
+  useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setCustomerName(user.name || ''); setCustomerPhone(user.phone || ''); setAddress(user.deliveryAddress || ''); setDistrict(user.district || store.district || 'Chincha Alta'); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
   useEffect(() => {
     const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 400);
     updateBackToTopVisibility();
@@ -70,6 +70,7 @@ function App() {
   const topPicks = useMemo(() => menuProducts.filter((product) => featuredNames.includes(product.name)), [menuProducts]);
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
+  const hasSavedContact = Boolean(authToken && customerName.trim() && customerPhone.trim() && (fulfillment === 'PICKUP' || (address.trim() && district.trim())));
   const triggerBurgerBuild = (origin: HTMLButtonElement) => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !cartButtonRef.current) return;
     const source = origin.getBoundingClientRect();
@@ -140,7 +141,7 @@ function App() {
     if (api === null) { setAuthError('La autenticación estará disponible cuando se conecte la API.'); return; }
     setAuthError('');
     const data = new FormData(form);
-    const payload = { name: data.get('name'), email: data.get('email'), password: data.get('password') };
+    const payload = { name: data.get('name'), email: data.get('email'), password: data.get('password'), phone: data.get('phone'), deliveryAddress: data.get('deliveryAddress'), district: data.get('district') };
     const endpoint = accountMode === 'login' ? 'login' : 'register';
     const response = await fetch(api + '/api/auth/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(accountMode === 'login' ? { email: payload.email, password: payload.password } : payload) });
     const body = await response.json().catch(() => ({}));
@@ -148,6 +149,18 @@ function App() {
     sessionStorage.setItem('la-yeka-user-token', body.token);
     sessionStorage.setItem('la-yeka-user-name', body.user.name || body.user.email);
     setAuthToken(body.token); setAccountName(body.user.name || body.user.email); setDialog(null);
+  };
+  const updateProfile = async (form: HTMLFormElement) => {
+    const api = apiBase;
+    if (api === null || !authToken) return;
+    setAuthError('');
+    const data = new FormData(form);
+    const response = await fetch(api + '/api/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ name: data.get('name'), phone: data.get('phone'), deliveryAddress: data.get('deliveryAddress'), district: data.get('district') }) });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) { setAuthError(body.error || 'No se pudieron guardar tus datos.'); return; }
+    setAccountName(body.user.name || body.user.email);
+    setCustomerName(body.user.name || ''); setCustomerPhone(body.user.phone || ''); setAddress(body.user.deliveryAddress || ''); setDistrict(body.user.district || store.district || 'Chincha Alta');
+    setDialog(null);
   };
   return (
     <>
@@ -441,14 +454,18 @@ function App() {
                   ))}
                 </div>
                 <ExtrasPicker extras={extras} onAdd={add} />
-                <input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" />
-                <input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" />
+                {authToken ? (
+                  <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+                    {hasSavedContact ? <><b className="block text-yeka-ink">Pedido para {customerName}</b><span>{customerPhone} · {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}</span></> : <><b className="block text-yeka-ink">Completa tus datos de pedido</b><span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span></>}
+                    <button className="mt-2 text-xs font-bold text-yeka-gold underline" onClick={() => { setAuthError(''); setDialog('account'); }}>{hasSavedContact ? 'Editar mis datos' : 'Completar mi perfil'}</button>
+                  </div>
+                ) : <><input className="mt-4 w-full border border-stone-200 bg-white p-3 text-sm" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Tu nombre" aria-label="Tu nombre" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Tu celular" type="tel" aria-label="Tu celular" /></>}
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
                   <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option></select>
                 </div>
                 {paymentMethod === 'YAPE' && <div className="mt-2 grid gap-2"><input className="w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" /><label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">Voucher Yape<input className="mt-2 block w-full text-xs font-normal" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} /><span className="mt-1 block text-xs font-normal text-stone-500">{paymentProof ? `Adjunto: ${paymentProof.name}` : 'JPG, PNG o WEBP; máximo 4 MB.'}</span></label></div>}
-                {fulfillment === 'DELIVERY' && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
+                {fulfillment === 'DELIVERY' && !authToken && <><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Dirección de entrega" aria-label="Dirección de entrega" /><input className="mt-2 w-full border border-stone-200 bg-white p-3 text-sm" value={district} onChange={(event) => setDistrict(event.target.value)} placeholder="Distrito" aria-label="Distrito" /></>}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -592,7 +609,16 @@ function App() {
                 <h2>{accountName ? `Hola, ${accountName}` : accountMode === 'login' ? 'Inicia sesión' : 'Crea tu cuenta'}</h2>
                 {accountName ? (
                   <div className="grid gap-4">
-                    <p className="modal-lead">Tu cuenta está lista para asociar los pedidos que hagas desde este dispositivo.</p>
+                    <p className="modal-lead">Tus datos se usan automáticamente cuando haces un pedido.</p>
+                    <form className="claim-form" onSubmit={(event) => { event.preventDefault(); updateProfile(event.currentTarget).catch(() => setAuthError('No se pudieron guardar tus datos.')); }}>
+                      <h3 className="wide mb-0 text-base font-extrabold">Datos de entrega</h3>
+                      <label>Nombre completo<input name="name" required minLength={2} defaultValue={customerName} /></label>
+                      <label>Celular<input name="phone" required minLength={7} type="tel" defaultValue={customerPhone} /></label>
+                      <label className="wide">Dirección de entrega<input name="deliveryAddress" required minLength={5} defaultValue={address} /></label>
+                      <label className="wide">Distrito<input name="district" required minLength={2} defaultValue={district} /></label>
+                      {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
+                      <button className="checkout wide" type="submit">Guardar mis datos</button>
+                    </form>
                     <div className="grid gap-2">
                       <h3 className="mb-0 text-base font-extrabold">Pedidos recientes</h3>
                       {orderHistory.length === 0 ? <p className="mb-0 text-sm text-stone-500">Aún no tienes pedidos registrados.</p> : orderHistory.map((order) => (
@@ -606,7 +632,7 @@ function App() {
                   </div>
                 ) : (
                   <form className="claim-form" onSubmit={(event) => { event.preventDefault(); submitAccount(event.currentTarget).catch(() => setAuthError('No se pudo completar la operación.')); }}>
-                    {accountMode === 'register' && <label className="wide">Nombre completo<input name="name" required minLength={2} /></label>}
+                    {accountMode === 'register' && <><label className="wide">Nombre completo<input name="name" required minLength={2} /></label><label>Celular<input name="phone" required type="tel" minLength={7} /></label><label>Distrito<input name="district" required minLength={2} defaultValue={store.district} /></label><label className="wide">Dirección de entrega<input name="deliveryAddress" required minLength={5} /></label></>}
                     <label className="wide">Correo electrónico<input name="email" type="email" required autoComplete="email" /></label>
                     <label className="wide">Contraseña<input name="password" type="password" required minLength={10} autoComplete={accountMode === 'login' ? 'current-password' : 'new-password'} /></label>
                     {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
