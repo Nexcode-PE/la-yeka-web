@@ -8,7 +8,13 @@ export type Product = {
   category: { id: string; name: string } | null;
 };
 
-export type Category = { id: string; name: string; position: number };
+export type Category = {
+  id: string;
+  name: string;
+  position: number;
+  isAvailable: boolean;
+  _count?: { products: number };
+};
 
 export type Order = {
   id: string;

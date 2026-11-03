@@ -17,7 +17,7 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
 }))
 app.get('/health', (c) => c.json({ ok: true }))
-app.get('/catalog', async (c) => c.json(await db.category.findMany({ orderBy: { position: 'asc' }, include: { products: { where: { isAvailable: true }, orderBy: { position: 'asc' } } } })))
+app.get('/catalog', async (c) => c.json(await db.category.findMany({ where:{ isAvailable:true }, orderBy: { position: 'asc' }, include: { products: { where: { isAvailable: true }, orderBy: { position: 'asc' } } } })))
 app.post('/auth/login', async (c) => { if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503); const data = z.object({ email:z.string().email(), password:z.string().min(10) }).safeParse(await c.req.json()); if (!data.success) return c.json({ error:'Credenciales inválidas' },400); const session=await login(data.data.email,data.data.password); return session ? c.json(session) : c.json({ error:'Correo o contraseña incorrectos' },401) })
 app.post('/auth/register', async (c) => {
   if (!sessionsEnabled()) return c.json({ error:'El acceso aún no está configurado.' },503)
@@ -38,7 +38,7 @@ app.get('/orders/me', async (c) => {
   }))
 })
 app.get('/admin/products', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.product.findMany({ include:{category:true},orderBy:[{category:{position:'asc'}},{position:'asc'}] })) })
-app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'} })) })
+app.get('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.category.findMany({ orderBy:{position:'asc'}, include:{_count:{select:{products:true}}} })) })
 app.get('/admin/dashboard', async (c) => {
   if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
   const today = new Date(); today.setHours(0,0,0,0)
@@ -75,7 +75,53 @@ app.post('/admin/uploads', async (c) => {
   const blob = await put(`products/${safeName}`, image, { access: 'public', addRandomSuffix: true })
   return c.json({ url: blob.url }, 201)
 })
-app.post('/admin/categories', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); const parsed=z.object({name:z.string().trim().min(2).max(50)}).safeParse(await c.req.json()); if(!parsed.success)return c.json({error:'Nombre de categoría inválido'},400); const position=await db.category.count(); try { return c.json(await db.category.create({data:{name:parsed.data.name,position}}),201) } catch { return c.json({error:'La categoría ya existe.'},409) } })
+const categoryInput = z.object({
+  name:z.string().trim().min(2).max(50),
+  position:z.number().int().min(0).optional(),
+  isAvailable:z.boolean().optional(),
+})
+const categoryUpdate = categoryInput.partial()
+app.post('/admin/categories', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const parsed=categoryInput.safeParse(await c.req.json())
+  if(!parsed.success)return c.json({error:'Nombre de categoría inválido'},400)
+  const position = parsed.data.position ?? await db.category.count()
+  try { return c.json(await db.category.create({data:{...parsed.data,position},include:{_count:{select:{products:true}}}}),201) }
+  catch { return c.json({error:'La categoría ya existe.'},409) }
+})
+app.patch('/admin/categories/:id', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const parsed=categoryUpdate.safeParse(await c.req.json())
+  if(!parsed.success || Object.keys(parsed.data).length === 0) return c.json({ error:'Datos inválidos' },400)
+  try {
+    const id = c.req.param('id')
+    const current = await db.category.findUniqueOrThrow({ where:{id} })
+    const { position, ...changes } = parsed.data
+    if (position === undefined || position === current.position) {
+      return c.json(await db.category.update({ where:{id}, data:changes, include:{_count:{select:{products:true}}} }))
+    }
+    const lastPosition = Math.max(0, await db.category.count() - 1)
+    const nextPosition = Math.min(position, lastPosition)
+    await db.$transaction([
+      db.category.updateMany({
+        where: nextPosition < current.position
+          ? { position:{gte:nextPosition,lt:current.position} }
+          : { position:{gt:current.position,lte:nextPosition} },
+        data: { position: nextPosition < current.position ? { increment:1 } : { decrement:1 } },
+      }),
+      db.category.update({ where:{id}, data:{...changes,position:nextPosition} }),
+    ])
+    return c.json(await db.category.findUnique({ where:{id}, include:{_count:{select:{products:true}}} }))
+  }
+  catch { return c.json({ error:'Categoría no encontrada o nombre duplicado.' },404) }
+})
+app.delete('/admin/categories/:id', async (c) => {
+  if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401)
+  const id=c.req.param('id')
+  if (await db.product.count({where:{categoryId:id}}) > 0) return c.json({ error:'No se puede eliminar una categoría que aún tiene productos. Mueve o elimina esos productos primero.' },409)
+  try { await db.category.delete({where:{id}}); return c.body(null,204) }
+  catch { return c.json({ error:'Categoría no encontrada.' },404) }
+})
 app.get('/admin/orders', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.order.findMany({ include:{items:true},orderBy:{createdAt:'desc'},take:100 })) })
 app.get('/admin/claims', async (c) => { if (!await requireAdmin(c.req.header('authorization'))) return c.json({ error:'No autorizado' },401); return c.json(await db.claim.findMany({ orderBy:{createdAt:'desc'},take:100 })) })
 const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'CANCELLED']) })

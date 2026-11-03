@@ -22,8 +22,10 @@ model Category {
   id        String    @id @default(uuid()) @db.Uuid
   name      String    @unique
   position  Int       @default(0)
+  isAvailable Boolean @default(true) @map("is_available")
   createdAt DateTime  @default(now()) @map("created_at")
   products  Product[]
+  @@index([isAvailable, position])
   @@map("categories")
 }
 

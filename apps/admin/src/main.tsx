@@ -29,6 +29,7 @@ import type { Category, Claim, Dashboard, Order, Product, View } from './types/a
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
+import { CategoryManagerDialog } from './components/CategoryManagerDialog';
 
 function Admin() {
   const [token, setToken] = useState(() => sessionStorage.getItem('la-yeka-admin-token') || '');
@@ -52,6 +53,8 @@ function Admin() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productImage, setProductImage] = useState<File | null>(null);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [savingCategoryId, setSavingCategoryId] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [notice, setNotice] = useState('');
@@ -214,6 +217,46 @@ function Admin() {
       setError(cause instanceof Error ? cause.message : 'No se pudo eliminar el producto.');
     } finally {
       setSavingId('');
+    }
+  };
+  const createCategory = async (name: string) => {
+    setError('');
+    try {
+      await request('/admin/categories', { method: 'POST', body: JSON.stringify({ name }) });
+      await load();
+      setNotice('Categoría creada correctamente.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo crear la categoría.');
+    }
+  };
+  const updateCategory = async (
+    id: string,
+    data: Partial<Pick<Category, 'name' | 'position' | 'isAvailable'>>,
+  ) => {
+    setSavingCategoryId(id);
+    setError('');
+    try {
+      await request(`/admin/categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+      await load();
+      setNotice('Categoría actualizada correctamente.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo actualizar la categoría.');
+    } finally {
+      setSavingCategoryId('');
+    }
+  };
+  const deleteCategory = async (category: Category) => {
+    if (!window.confirm(`¿Eliminar la categoría “${category.name}”?`)) return;
+    setSavingCategoryId(category.id);
+    setError('');
+    try {
+      await request(`/admin/categories/${category.id}`, { method: 'DELETE' });
+      await load();
+      setNotice('Categoría eliminada correctamente.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo eliminar la categoría.');
+    } finally {
+      setSavingCategoryId('');
     }
   };
   const openProductForm = (product: Product | null = null) => {
@@ -427,12 +470,20 @@ function Admin() {
               {loading ? 'Actualizando…' : 'Actualizar datos'}
             </button>
             {view === 'products' && (
-              <button
-                onClick={() => openProductForm()}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#4169ff] px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"
-              >
-                <Plus size={16} /> Nuevo producto
-              </button>
+              <>
+                <button
+                  onClick={() => setShowCategoryManager(true)}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#aebdff] hover:bg-[#eef2ff]"
+                >
+                  <Package size={16} /> Categorías
+                </button>
+                <button
+                  onClick={() => openProductForm()}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#4169ff] px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3156d8]"
+                >
+                  <Plus size={16} /> Nuevo producto
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -819,6 +870,16 @@ function Admin() {
               </div>
             </form>
           </div>
+        )}
+        {showCategoryManager && (
+          <CategoryManagerDialog
+            categories={categories}
+            savingId={savingCategoryId}
+            onClose={() => setShowCategoryManager(false)}
+            onCreate={createCategory}
+            onUpdate={updateCategory}
+            onDelete={deleteCategory}
+          />
         )}
       </section>
       <nav
