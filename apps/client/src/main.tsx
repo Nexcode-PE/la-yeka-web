@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
 import { apiBase, featuredNames, money, productVisual, whatsappNumber as defaultWhatsApp } from './lib/client-config';
 import type { CartItem, OrderHistory, Product } from './types/catalog';
@@ -116,7 +116,7 @@ function App() {
       setCart((items) => items.filter((item) => item.name !== name));
       setDeletingItem(null);
       deleteTimeout.current = null;
-    }, 320);
+    }, 520);
   };
   const send = async () => {
     if (!cart.length) return;
@@ -459,12 +459,12 @@ function App() {
                       </div>
                       <strong>{money(x.price * x.qty)}</strong>
                       <button
-                        className={`cart-delete-button ml-2 grid size-8 place-items-center rounded border-0 bg-red-50 text-red-700 hover:bg-red-100 ${deletingItem === x.name ? 'is-deleting' : ''}`}
+                        className={`cart-delete-button h-9 w-9 shrink-0 border-0 bg-red-50 text-red-700 ${deletingItem === x.name ? 'is-deleting' : ''}`}
                         aria-label={`Eliminar ${x.name}`}
                         onClick={() => remove(x.name)}
                         disabled={Boolean(deletingItem)}
                       >
-                        <Trash2 size={16} />
+                        <span className="trash-bin" aria-hidden="true"><span className="trash-food" /><span className="trash-lid" /><span className="trash-body"><i /><i /></span></span>
                       </button>
                     </div>
                   ))}
