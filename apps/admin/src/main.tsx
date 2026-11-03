@@ -70,6 +70,8 @@ function Admin() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [savingCategoryId, setSavingCategoryId] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
@@ -316,6 +318,17 @@ function Admin() {
       await request(`/admin/orders/${order.id}/payment`, { method:'PATCH', body:JSON.stringify({ status:paymentStatuses[order.id] || order.paymentStatus, reference:paymentReferences[order.id] || null }) });
       await load(); setNotice('Información de pago actualizada.');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el pago.'); }
+    finally { setSavingId(''); }
+  };
+  const cancelOrder = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!cancellingOrder || cancelReason.trim().length < 5) return;
+    setSavingId(cancellingOrder.id); setError('');
+    try {
+      await request(`/admin/orders/${cancellingOrder.id}`, { method:'PATCH', body:JSON.stringify({status:'CANCELLED',reason:cancelReason.trim()}) });
+      setCancellingOrder(null); setCancelReason(''); await load(); await refreshAlerts();
+      setNotice('Pedido cancelado y motivo registrado.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo cancelar el pedido.'); }
     finally { setSavingId(''); }
   };
   const saveClaim = async (claim: Claim, data: { status?: string; adminResponse?: string | null }) => {
@@ -815,7 +828,10 @@ function Admin() {
                             <Status
                               value={order.status}
                               options={statusOptions.orders}
-                              onChange={(status) => update('orders', order.id, { status })}
+                              onChange={(status) => {
+                                if (status === 'CANCELLED') { setCancellingOrder(order); setCancelReason(''); return; }
+                                update('orders', order.id, { status });
+                              }}
                             />
                             {nextOrderAction[order.status] && (
                               <button
@@ -832,6 +848,7 @@ function Admin() {
                             >
                               <ExternalLink size={15} /> WhatsApp
                             </button>
+                            {!['DELIVERED', 'CANCELLED'].includes(order.status) && <button onClick={() => { setCancellingOrder(order); setCancelReason(''); }} className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50">Cancelar pedido</button>}
                           </div>
                         </div>
                       </article>
@@ -1114,6 +1131,7 @@ function Admin() {
           />
         )}
         {showTeamForm && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4"><form onSubmit={saveAdminUser} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">EQUIPO</p><h3 className="mt-1 text-xl font-bold">{editingAdmin ? 'Editar acceso' : 'Nuevo acceso administrativo'}</h3></div><button type="button" aria-label="Cerrar" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button></div><div className="mt-6 grid gap-4"><label className="grid gap-1.5 text-sm font-bold">Nombre<input name="name" defaultValue={editingAdmin?.name || ''} required minLength={2} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>{!editingAdmin && <label className="grid gap-1.5 text-sm font-bold">Correo electrónico<input name="email" type="email" required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>}<label className="grid gap-1.5 text-sm font-bold">{editingAdmin ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}<input name="password" type="password" required={!editingAdmin} minLength={10} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /><span className="text-xs font-normal text-slate-500">Mínimo 10 caracteres. Compártela por un canal seguro.</span></label></div><div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button><button disabled={savingId === 'team'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'team' ? 'Guardando…' : editingAdmin ? 'Guardar cambios' : 'Crear acceso'}</button></div></form></div>}
+        {cancellingOrder && <div role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/45 p-4"><form onSubmit={cancelOrder} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-red-600">PEDIDO YEKA-{String(cancellingOrder.orderNumber).padStart(6,'0')}</p><h3 id="cancel-order-title" className="mt-1 text-xl font-bold">Cancelar pedido</h3><p className="mt-1 text-sm text-slate-500">El motivo quedará registrado en el historial operativo.</p></div><button type="button" aria-label="Cerrar" onClick={() => setCancellingOrder(null)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button></div><label className="mt-5 grid gap-1.5 text-sm font-bold">Motivo de cancelación<textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required minLength={5} maxLength={300} rows={4} placeholder="Ej.: Cliente canceló el pedido antes de la preparación." className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-red-400 focus:ring-2" /></label><div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => setCancellingOrder(null)} className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Volver</button><button disabled={savingId === cancellingOrder.id || cancelReason.trim().length < 5} className="h-10 rounded-lg bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">{savingId === cancellingOrder.id ? 'Cancelando…' : 'Confirmar cancelación'}</button></div></form></div>}
       </section>
       <nav
         aria-label="Navegación principal móvil"

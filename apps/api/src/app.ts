@@ -222,6 +222,7 @@ const orderStatus = z.object({ status: z.enum(['PENDING', 'CONFIRMED', 'PREPARIN
 app.patch('/admin/orders/:id', async (c) => {
   const admin = await requireAdmin(c.req.header('authorization')); if (!admin) return c.json({ error:'No autorizado' },401)
   const parsed = orderStatus.safeParse(await c.req.json()); if (!parsed.success) return c.json({ error:'Estado inválido' },400)
+  if (parsed.data.status === 'CANCELLED' && (!parsed.data.reason || parsed.data.reason.length < 5)) return c.json({ error:'Indica un motivo de al menos 5 caracteres para cancelar el pedido.' },400)
   try {
     const current = await db.order.findUniqueOrThrow({where:{id:c.req.param('id')}})
     if (current.status === parsed.data.status) return c.json(current)
