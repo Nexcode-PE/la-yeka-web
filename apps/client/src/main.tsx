@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, Trash2, UserRound, UtensilsCrossed, X } from 'lucide-react';
 import './tailwind.css';
@@ -28,6 +28,10 @@ function App() {
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [cartNotice, setCartNotice] = useState('');
   const cartNoticeTimeout = useRef<number | null>(null);
+  const cartButtonRef = useRef<HTMLButtonElement>(null);
+  const [burgerBuild, setBurgerBuild] = useState<{ x: number; y: number; flyX: number; flyY: number; id: number } | null>(null);
+  const [cartPulse, setCartPulse] = useState(false);
+  const burgerBuildTimeout = useRef<number | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => {
     const base = apiBase;
@@ -52,7 +56,16 @@ function App() {
   const topPicks = useMemo(() => catalog.filter((product) => featuredNames.includes(product.name)), [catalog]);
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
-  const add = (p: Product) => {
+  const triggerBurgerBuild = (origin: HTMLButtonElement) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !cartButtonRef.current) return;
+    const source = origin.getBoundingClientRect();
+    const target = cartButtonRef.current.getBoundingClientRect();
+    if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
+    setBurgerBuild({ x: source.left + source.width / 2, y: source.top + source.height / 2, flyX: target.left + target.width / 2 - (source.left + source.width / 2), flyY: target.top + target.height / 2 - (source.top + source.height / 2), id: Date.now() });
+    setCartPulse(true);
+    burgerBuildTimeout.current = window.setTimeout(() => { setBurgerBuild(null); setCartPulse(false); }, 1050);
+  };
+  const add = (p: Product, origin?: HTMLButtonElement) => {
     setCart((c) => {
       const current = c.find((x) => x.name === p.name);
       return current
@@ -62,9 +75,11 @@ function App() {
     setCartNotice(`${p.name} agregado al carrito`);
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
     cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 2500);
+    if (origin && p.category !== 'Bebidas' && p.category !== 'Complemento') triggerBurgerBuild(origin);
   };
   useEffect(() => () => {
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
+    if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
   }, []);
   const change = (name: string, d: number) =>
     setCart((c) =>
@@ -131,7 +146,7 @@ function App() {
           <button className="account-button" onClick={() => { setAuthError(''); setDialog('account'); }}>
             {accountName ? <><UserRound size={17} /><span>{accountName.split(' ')[0]}</span></> : <><LogIn size={17} /><span>Iniciar sesión</span></>}
           </button>
-          <button className="cart-button" onClick={() => setOpen(true)}>
+          <button ref={cartButtonRef} className={`cart-button ${cartPulse ? 'cart-pulse' : ''}`} onClick={() => setOpen(true)}>
             <ShoppingBag size={18} />
             <b>{count}</b> Mi pedido
           </button>
@@ -196,7 +211,7 @@ function App() {
                   <p>{p.detail}</p>
                   <div>
                     <strong>{money(p.price)}</strong>
-                    <button onClick={() => add(p)}>
+                    <button onClick={(event) => add(p, event.currentTarget)}>
                       Agregar <Plus size={15} />
                     </button>
                   </div>
@@ -246,7 +261,7 @@ function App() {
                   </div>
                   <div className="card-bottom">
                     <strong>{money(p.price)}</strong>
-                    <button aria-label={`Agregar ${p.name}`} onClick={() => add(p)}>
+                    <button aria-label={`Agregar ${p.name}`} onClick={(event) => add(p, event.currentTarget)}>
                       <Plus size={19} />
                     </button>
                   </div>
@@ -268,9 +283,7 @@ function App() {
             {extras.map((x) => (
               <button
                 key={x.name}
-                onClick={() =>
-                  add({ ...x, detail: 'Extra para tu pedido', category: 'Complemento' })
-                }
+                onClick={() => add({ ...x, detail: 'Extra para tu pedido', category: 'Complemento' })}
               >
                 <span>{x.name}</span>
                 <b>+ {money(x.price)}</b>
@@ -601,6 +614,21 @@ function App() {
               </>
             )}
           </section>
+        </div>
+      )}
+      {burgerBuild && (
+        <div
+          key={burgerBuild.id}
+          aria-hidden="true"
+          className="burger-build"
+          style={{ left: burgerBuild.x, top: burgerBuild.y, '--fly-x': `${burgerBuild.flyX}px`, '--fly-y': `${burgerBuild.flyY}px` } as CSSProperties}
+        >
+          <span className="burger-layer burger-top" />
+          <span className="burger-layer burger-sauce" />
+          <span className="burger-layer burger-cheese" />
+          <span className="burger-layer burger-patty" />
+          <span className="burger-layer burger-lettuce" />
+          <span className="burger-layer burger-bottom" />
         </div>
       )}
       <div

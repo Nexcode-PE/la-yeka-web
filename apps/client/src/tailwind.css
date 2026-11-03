@@ -142,4 +142,30 @@
   .claim-success { @apply rounded bg-emerald-50 p-5 text-emerald-950; }
   .claim-success h3 { @apply mb-2 font-extrabold; }
   .claim-success p { @apply mb-0 text-sm; }
+  .cart-pulse { animation: cart-pop .55s ease-out both; }
+  .burger-build { @apply pointer-events-none fixed z-[80] h-20 w-24; animation: burger-flight 1.05s cubic-bezier(.2,.8,.2,1) both; }
+  .burger-layer { @apply absolute left-1/2 block -translate-x-1/2 shadow-[0_4px_7px_rgba(0,0,0,.26)]; animation: ingredient-drop .42s cubic-bezier(.2,.85,.32,1.25) both; }
+  .burger-top { @apply top-1 h-5 w-[74px] rounded-t-[999px] bg-[#d9852d]; animation-delay: .28s; }
+  .burger-sauce { @apply top-6 h-1.5 w-[78px] rounded-full bg-yeka-gold; animation-delay: .22s; }
+  .burger-cheese { @apply top-7 h-3 w-[80px] rotate-[-2deg] bg-[#ffcb32]; animation-delay: .18s; }
+  .burger-patty { @apply top-10 h-3.5 w-[76px] rounded-full bg-[#4a2014]; animation-delay: .12s; }
+  .burger-lettuce { @apply top-[53px] h-2.5 w-[82px] rounded-full bg-[#4f8d2a]; animation-delay: .06s; }
+  .burger-bottom { @apply top-[62px] h-3.5 w-[74px] rounded-b-[999px] bg-[#c76f28]; }
+}
+
+@keyframes ingredient-drop {
+  from { opacity: 0; transform: translate(-50%, -34px) rotate(-8deg) scale(.8); }
+  to { opacity: 1; transform: translate(-50%, 0) rotate(0) scale(1); }
+}
+@keyframes burger-flight {
+  0%, 52% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  68% { opacity: 1; transform: translate(-50%, -64%) scale(1.08); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--fly-x)), calc(-50% + var(--fly-y))) scale(.17); }
+}
+@keyframes cart-pop {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .burger-build, .burger-layer, .cart-pulse { animation: none !important; }
 }
