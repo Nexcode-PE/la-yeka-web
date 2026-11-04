@@ -388,7 +388,10 @@ app.get('/admin/dashboard', async (c) => {
     db.product.count({ where: { isAvailable: true } }),
     db.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
   ]);
-  const sales = rangeOrders.reduce((total, order) => total + Number(order.total), 0);
+  const sales = rangeOrders.reduce(
+    (total, order) => total + Number(order.total) + Number(order.deliveryFee),
+    0,
+  );
   const productSales = new Map<string, { quantity: number; revenue: number }>();
   for (const order of rangeOrders)
     for (const item of order.items) {
@@ -416,7 +419,7 @@ app.get('/admin/dashboard', async (c) => {
         method,
         rangeOrders
           .filter((order) => order.paymentMethod === method)
-          .reduce((total, order) => total + Number(order.total), 0),
+          .reduce((total, order) => total + Number(order.total) + Number(order.deliveryFee), 0),
       ]),
     ),
     statusBreakdown: Object.fromEntries(
@@ -699,7 +702,7 @@ app.patch('/admin/orders/:id/delivery', async (c) => {
       return c.json({ error: 'Este pedido es para recojo en local.' }, 400);
     const order = await db.order.update({
       where: { id: current.id },
-      data: parsed.data,
+      data: { ...parsed.data, deliveryQuotedAt: new Date() },
     });
     await writeAudit(
       admin,
@@ -727,12 +730,12 @@ const cashSummaryForShift = async (openedAt: Date, closedAt?: Date | null) => {
       createdAt: { gte: openedAt, ...(closedAt ? { lte: closedAt } : {}) },
       status: { not: 'CANCELLED' },
     },
-    select: { paymentMethod: true, paymentStatus: true, status: true, total: true },
+    select: { paymentMethod: true, paymentStatus: true, status: true, total: true, deliveryFee: true },
   });
   return orders.reduce(
     (summary, order) => {
       if (order.status !== 'DELIVERED') return summary;
-      const amount = Number(order.total);
+      const amount = Number(order.total) + Number(order.deliveryFee);
       summary.completedOrders += 1;
       if (order.paymentMethod === 'CASH') summary.cash += amount;
       if (order.paymentMethod === 'YAPE' && order.paymentStatus === 'VERIFIED') summary.yape += amount;
@@ -964,7 +967,7 @@ const orderInput = z
         code: 'custom',
         message: 'Indica dirección y distrito para el delivery.',
       });
-    if (data.paymentMethod === 'YAPE' && !data.paymentReference)
+    if (data.paymentMethod === 'YAPE' && data.fulfillment === 'PICKUP' && !data.paymentReference)
       context.addIssue({ code: 'custom', message: 'Indica el código de operación Yape.' });
   });
 app.post('/orders', async (c) => {

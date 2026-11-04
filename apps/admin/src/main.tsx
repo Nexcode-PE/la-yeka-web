@@ -468,7 +468,15 @@ function Admin() {
     const phone = order.customerPhone?.replace(/\D/g, '');
     if (!phone) return setError('El pedido no tiene un número de celular válido.');
     const normalized = phone.startsWith('51') ? phone : `51${phone}`;
-    const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido YEKA-${String(order.orderNumber).padStart(6, '0')}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}%0A%0ATotal: S/ ${Number(order.total).toFixed(2)}%0AEstado: ${labels[order.status]}.`;
+    const subtotal = Number(order.total);
+    const delivery = Number(order.deliveryFee || 0);
+    const deliveryMessage =
+      order.fulfillment === 'DELIVERY'
+        ? order.deliveryQuotedAt
+          ? `%0A%0ASubtotal: S/ ${subtotal.toFixed(2)}%0ADelivery: S/ ${delivery.toFixed(2)}%0ATotal a pagar: S/ ${(subtotal + delivery).toFixed(2)}%0A%0AConfírmanos para coordinar el pago y despacho.`
+          : '%0A%0AEstamos calculando el costo de delivery según tu dirección. Te confirmaremos el total antes de solicitar el pago.'
+        : `%0A%0ATotal: S/ ${subtotal.toFixed(2)}`;
+    const message = `Hola ${order.customerName || ''}, te escribimos de La Yeka por tu pedido YEKA-${String(order.orderNumber).padStart(6, '0')}.%0A%0A${order.items.map((item) => `${item.quantity}× ${item.productName}`).join('%0A')}${deliveryMessage}%0AEstado: ${labels[order.status]}.`;
     window.open(`https://wa.me/${normalized}?text=${message}`, '_blank', 'noopener,noreferrer');
   };
   const savePayment = async (order: Order) => {

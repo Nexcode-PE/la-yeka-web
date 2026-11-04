@@ -32,6 +32,7 @@ export type Order = {
   address: string | null;
   district: string | null;
   deliveryFee: string;
+  deliveryQuotedAt: string | null;
   deliveryDriver: string | null;
   estimatedMinutes: number | null;
   items: Array<{ productName: string; quantity: number }>;

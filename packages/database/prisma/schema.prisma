@@ -70,6 +70,7 @@ model Order {
   address       String?
   district      String?
   deliveryFee   Decimal     @default(0) @map("delivery_fee") @db.Decimal(8, 2)
+  deliveryQuotedAt DateTime? @map("delivery_quoted_at")
   deliveryDriver String?    @map("delivery_driver")
   estimatedMinutes Int?     @map("estimated_minutes")
   notes         String?

@@ -290,7 +290,8 @@ function App() {
             notes: note,
             fulfillment,
             paymentMethod,
-            paymentReference: paymentMethod === 'YAPE' ? paymentReference : undefined,
+            paymentReference:
+              paymentMethod === 'YAPE' && fulfillment === 'PICKUP' ? paymentReference : undefined,
             address: fulfillment === 'DELIVERY' ? address : undefined,
             district: fulfillment === 'DELIVERY' ? district : undefined,
             items: cart.map((item) => ({ productId: item.id, quantity: item.qty })),
@@ -298,7 +299,7 @@ function App() {
         });
         if (!response.ok) throw new Error('No fue posible registrar el pedido');
         const created = await response.json();
-        if (paymentMethod === 'YAPE') {
+        if (paymentMethod === 'YAPE' && fulfillment === 'PICKUP') {
           if (!paymentProof) throw new Error('Adjunta el voucher de Yape para continuar.');
           const form = new FormData();
           form.append('proof', paymentProof);
@@ -320,7 +321,7 @@ function App() {
       return;
     }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
-    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}${paymentMethod === 'YAPE' ? `%0ACódigo Yape: ${encodeURIComponent(paymentReference)}` : ''}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
+    const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}${paymentMethod === 'YAPE' && fulfillment === 'PICKUP' ? `%0ACódigo Yape: ${encodeURIComponent(paymentReference)}` : ''}%0A${fulfillment === 'DELIVERY' ? `Subtotal de productos: ${encodeURIComponent(money(total))}%0ACosto de delivery: por confirmar según dirección` : `Total: ${encodeURIComponent(money(total))}`}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
     setCart([]);
     setNote('');
     setPaymentReference('');
@@ -839,7 +840,7 @@ function App() {
                     <option value="YAPE">Yape</option>
                   </select>
                 </div>
-                {paymentMethod === 'YAPE' && (
+                {paymentMethod === 'YAPE' && fulfillment === 'PICKUP' && (
                   <div className="mt-2 grid gap-2">
                     <input
                       className="w-full border border-stone-200 bg-white p-3 text-sm"
@@ -864,13 +865,18 @@ function App() {
                     </label>
                   </div>
                 )}
+                {fulfillment === 'DELIVERY' && (
+                  <p className="mt-2 border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                    El delivery se cotiza según tu dirección. Envía tu pedido con el subtotal y te confirmaremos el monto final antes de coordinar el pago.
+                  </p>
+                )}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="¿Alguna indicación para tu pedido?"
                 />
                 <div className="total">
-                  <span>Total</span>
+                  <span>{fulfillment === 'DELIVERY' ? 'Subtotal de productos' : 'Total'}</span>
                   <strong>{money(total)}</strong>
                 </div>
                 <button
@@ -881,7 +887,7 @@ function App() {
                     sending ||
                     !customerName.trim() ||
                     !customerPhone.trim() ||
-                    (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) ||
+                    (paymentMethod === 'YAPE' && fulfillment === 'PICKUP' && (!paymentReference.trim() || !paymentProof)) ||
                     (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))
                   }
                 >
