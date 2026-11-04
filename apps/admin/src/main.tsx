@@ -8,10 +8,14 @@ import {
   CheckCircle2,
   ChartNoAxesCombined,
   ChevronRight,
+  Eye,
+  EyeOff,
   ExternalLink,
   Filter,
   LayoutDashboard,
+  LockKeyhole,
   LogOut,
+  Mail,
   Package,
   Plus,
   Pencil,
@@ -21,6 +25,7 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingBag,
+  Sparkles,
   TriangleAlert,
   Trash2,
   Upload,
@@ -70,6 +75,8 @@ function Admin() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
   const [error, setError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [productQuery, setProductQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -237,6 +244,7 @@ function Admin() {
     event.preventDefault();
     prepareNotificationSound();
     setError('');
+    setIsAuthenticating(true);
     const fields = new FormData(event.currentTarget);
     try {
       const session = await request('/auth/login', {
@@ -251,6 +259,8 @@ function Admin() {
       setUser(session.user.name || session.user.email);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo iniciar sesión.');
+    } finally {
+      setIsAuthenticating(false);
     }
   };
   const logout = () => {
@@ -592,51 +602,94 @@ function Admin() {
   );
   if (!token)
     return (
-      <main className="relative grid min-h-screen place-items-center overflow-hidden bg-slate-950 px-5 py-10 text-slate-950 before:absolute before:inset-x-0 before:top-0 before:h-1 before:bg-[#4169ff]">
-        <div className="pointer-events-none absolute -left-20 -top-28 size-80 rounded-full bg-[#4169ff]/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -right-20 size-96 rounded-full bg-blue-500/10 blur-3xl" />
-        <section className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-white p-7 shadow-2xl shadow-black/30 sm:p-9">
-          <div className="-mx-7 -mt-7 mb-7 flex h-24 items-center justify-center bg-slate-950 sm:-mx-9 sm:-mt-9">
-            <img src={brandLogo} alt="La Yeka" className="h-20 w-auto object-contain" />
-          </div>
-          <div className="mb-7 flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl bg-[#eef2ff] text-[#4169ff]">
-              <ShieldCheck size={22} />
+      <main className="login-shell relative grid min-h-screen place-items-center overflow-hidden px-5 py-7 text-slate-950 sm:p-8">
+        <div className="login-orb login-orb-one" />
+        <div className="login-orb login-orb-two" />
+        <section className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-[28px] sm:grid-cols-[0.92fr_1.08fr]">
+          <aside className="login-brand relative hidden min-h-[600px] flex-col justify-between overflow-hidden p-10 text-white sm:flex">
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="grid size-11 place-items-center rounded-2xl border border-amber-300/30 bg-white/10 backdrop-blur">
+                <Sparkles size={20} className="text-amber-300" />
+              </div>
+              <span className="text-xs font-bold tracking-[0.2em] text-amber-100">LA YEKA · ADMIN</span>
             </div>
-            <p className="text-xs font-bold tracking-[0.16em] text-[#4169ff]">LA YEKA · ADMIN</p>
+            <div className="relative z-10">
+              <div className="mb-6 h-px w-12 bg-amber-400" />
+              <h1 className="max-w-sm text-4xl font-black leading-[1.08] tracking-tight">
+                Todo tu negocio, en un solo lugar.
+              </h1>
+              <p className="mt-5 max-w-sm text-sm leading-6 text-slate-300">
+                Supervisa pedidos, organiza tu carta y atiende a tus clientes con agilidad.
+              </p>
+            </div>
+            <p className="relative z-10 text-xs font-medium text-slate-400">Operaciones La Yeka</p>
+          </aside>
+          <div className="login-form-panel flex min-h-[580px] flex-col px-6 py-7 sm:px-12 sm:py-10">
+            <div className="flex items-center justify-between sm:hidden">
+              <img src={brandLogo} alt="La Yeka" className="h-14 w-auto object-contain" />
+              <span className="rounded-full bg-[#fff4d6] px-3 py-1.5 text-[10px] font-extrabold tracking-[0.14em] text-[#9a6800]">ADMIN</span>
+            </div>
+            <div className="hidden sm:block">
+              <img src={brandLogo} alt="La Yeka" className="h-16 w-auto object-contain" />
+            </div>
+            <div className="my-auto max-w-sm pt-10 sm:pt-0">
+              <div className="mb-5 flex items-center gap-2 text-[11px] font-extrabold tracking-[0.16em] text-[#4169ff]">
+                <span className="grid size-7 place-items-center rounded-lg bg-[#eef2ff]"><ShieldCheck size={16} /></span>
+                ACCESO SEGURO
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-slate-950">Bienvenido de vuelta</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-500">Ingresa tus credenciales para continuar al panel de operación.</p>
+              <form className="mt-8 grid gap-5" onSubmit={login}>
+                <label className="grid gap-2 text-sm font-bold text-slate-700">
+                  Correo administrativo
+                  <span className="login-input-wrap">
+                    <Mail size={18} aria-hidden="true" />
+                    <input
+                      className="login-input"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="nombre@layeka.pe"
+                      required
+                    />
+                  </span>
+                </label>
+                <label className="grid gap-2 text-sm font-bold text-slate-700">
+                  Contraseña
+                  <span className="login-input-wrap">
+                    <LockKeyhole size={18} aria-hidden="true" />
+                    <input
+                      className="login-input pr-12"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="Ingresa tu contraseña"
+                      minLength={10}
+                      required
+                    />
+                    <button
+                      className="login-password-toggle"
+                      type="button"
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </span>
+                </label>
+                {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700">{error}</p>}
+                <button
+                  className="login-submit mt-1 flex h-12 items-center justify-center gap-2 rounded-xl px-4 font-bold text-white"
+                  type="submit"
+                  disabled={isAuthenticating}
+                >
+                  {isAuthenticating ? 'Ingresando…' : 'Ingresar al panel'}
+                  {!isAuthenticating && <ChevronRight size={19} aria-hidden="true" />}
+                </button>
+              </form>
+            </div>
+            <p className="pt-8 text-center text-xs text-slate-400 sm:text-left">Área exclusiva para el equipo autorizado de La Yeka.</p>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Panel de operación</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            Gestiona catálogo, pedidos y solicitudes de clientes.
-          </p>
-          <form className="mt-8 grid gap-4" onSubmit={login}>
-            <label className="grid gap-2 text-sm font-bold">
-              Correo administrativo
-              <input
-                className="h-11 rounded-lg border border-slate-200 bg-white px-3 outline-none ring-[#4169ff] focus:ring-2"
-                name="email"
-                type="email"
-                required
-              />
-            </label>
-            <label className="grid gap-2 text-sm font-bold">
-              Contraseña
-              <input
-                className="h-11 rounded-lg border border-slate-200 bg-white px-3 outline-none ring-[#4169ff] focus:ring-2"
-                name="password"
-                type="password"
-                minLength={10}
-                required
-              />
-            </label>
-            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-            <button
-              className="mt-2 h-11 rounded-lg bg-[#4169ff] px-4 font-semibold text-white transition hover:bg-[#3156d8]"
-              type="submit"
-            >
-              Ingresar al panel
-            </button>
-          </form>
         </section>
       </main>
     );
