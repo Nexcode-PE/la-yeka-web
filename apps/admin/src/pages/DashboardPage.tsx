@@ -1,4 +1,4 @@
-import { ChevronRight, CircleDollarSign, PackageCheck, ShoppingBag, TrendingUp } from 'lucide-react';
+import { ChevronRight, CircleDollarSign, Download, PackageCheck, ShoppingBag, TrendingUp } from 'lucide-react';
 import { labels } from '../lib/admin-config';
 import type { Dashboard } from '../types/admin';
 import { DashboardSkeleton, Empty, Stat } from '../components/ui';
@@ -9,12 +9,13 @@ type Props = {
   loading: boolean;
   onOrders: () => void;
   onPaymentReview: () => void;
+  onExport: () => void;
   range: Range;
   onRange: (range: Range) => void;
 };
 const rangeLabels: Record<Range, string> = { today: 'Hoy', week: 'Esta semana', month: 'Este mes' };
 
-export function DashboardPage({ dashboard, loading, onOrders, onPaymentReview, range, onRange }: Props) {
+export function DashboardPage({ dashboard, loading, onOrders, onPaymentReview, onExport, range, onRange }: Props) {
   if (loading && !dashboard) return <DashboardSkeleton />;
   if (!dashboard) return null;
   return (
@@ -26,16 +27,24 @@ export function DashboardPage({ dashboard, loading, onOrders, onPaymentReview, r
             Datos reales de pedidos y cobros registrados en PostgreSQL.
           </p>
         </div>
-        <div className="flex rounded-lg bg-slate-100 p-1">
-          {(Object.keys(rangeLabels) as Range[]).map((option) => (
-            <button
-              key={option}
-              onClick={() => onRange(option)}
-              className={`rounded-md px-3 py-1.5 text-xs font-bold transition ${range === option ? 'bg-white text-[#4169ff] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-            >
-              {rangeLabels[option]}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            onClick={onExport}
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            <Download size={14} /> Exportar
+          </button>
+          <div className="flex rounded-lg bg-slate-100 p-1">
+            {(Object.keys(rangeLabels) as Range[]).map((option) => (
+              <button
+                key={option}
+                onClick={() => onRange(option)}
+                className={`rounded-md px-3 py-1.5 text-xs font-bold transition ${range === option ? 'bg-white text-[#4169ff] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                {rangeLabels[option]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

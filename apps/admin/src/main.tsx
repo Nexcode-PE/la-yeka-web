@@ -338,6 +338,41 @@ function Admin() {
       setError(cause instanceof Error ? cause.message : 'No se pudo exportar los pedidos.');
     }
   };
+  const exportDashboardReport = () => {
+    if (!dashboard) return;
+    const safeCell = (value: string | number) => {
+      const text = String(value).replaceAll('"', '""');
+      return `"${/^[=+\-@]/.test(text) ? `'${text}` : text}"`;
+    };
+    const rows: Array<Array<string | number>> = [
+      ['Reporte La Yeka', reportRange === 'today' ? 'Hoy' : reportRange === 'week' ? 'Esta semana' : 'Este mes'],
+      ['Generado', new Date().toLocaleString('es-PE')],
+      [],
+      ['Indicador', 'Valor'],
+      ['Ventas cobradas', dashboard.sales.toFixed(2)],
+      ['Pedidos recibidos', dashboard.orders],
+      ['Pedidos cobrados', dashboard.paidOrders],
+      ['Ticket promedio', dashboard.averageTicket.toFixed(2)],
+      ['Por cobrar', dashboard.pendingPaymentAmount.toFixed(2)],
+      ['Pedidos por atender', dashboard.pending],
+      [],
+      ['Método de pago', 'Ventas'],
+      ...Object.entries(dashboard.paymentBreakdown).map(([method, total]) => [labels[method] || method, total.toFixed(2)]),
+      [],
+      ['Producto', 'Unidades', 'Ventas'],
+      ...dashboard.topProducts.map((product) => [product.name, product.quantity, product.revenue.toFixed(2)]),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(safeCell).join(',')).join('\r\n')}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `reporte-la-yeka-${reportRange}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setNotice('Reporte del Dashboard descargado.');
+  };
   const printOrder = (order: Order) => {
     const receipt = window.open('', `yeka-order-${order.orderNumber}`, 'width=420,height=680');
     if (!receipt) {
@@ -1019,6 +1054,7 @@ function Admin() {
               setOrderPage(1);
               setView('orders');
             }}
+            onExport={exportDashboardReport}
             range={reportRange}
             onRange={setReportRange}
           />
