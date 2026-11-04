@@ -378,9 +378,9 @@ app.get('/admin/dashboard', async (c) => {
   start.setHours(0, 0, 0, 0);
   if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   if (range === 'month') start.setDate(1);
-  const [rangeOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
+  const [periodOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
     db.order.findMany({
-      where: { createdAt: { gte: start }, status: { not: 'CANCELLED' } },
+      where: { createdAt: { gte: start } },
       include: { items: true },
     }),
     db.order.count({ where: { status: { in: ['PENDING', 'CONFIRMED', 'PREPARING'] } } }),
@@ -388,7 +388,17 @@ app.get('/admin/dashboard', async (c) => {
     db.product.count({ where: { isAvailable: true } }),
     db.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
   ]);
-  const sales = rangeOrders.reduce(
+  const rangeOrders = periodOrders.filter((order) => order.status !== 'CANCELLED');
+  const isPaid = (order: (typeof rangeOrders)[number]) =>
+    (order.paymentMethod === 'YAPE' && order.paymentStatus === 'VERIFIED') ||
+    (order.paymentMethod === 'CASH' && order.status === 'DELIVERED');
+  const paidOrders = rangeOrders.filter(isPaid);
+  const sales = paidOrders.reduce(
+    (total, order) => total + Number(order.total) + Number(order.deliveryFee),
+    0,
+  );
+  const pendingPaymentOrders = rangeOrders.filter((order) => !isPaid(order));
+  const pendingPaymentAmount = pendingPaymentOrders.reduce(
     (total, order) => total + Number(order.total) + Number(order.deliveryFee),
     0,
   );
@@ -408,8 +418,11 @@ app.get('/admin/dashboard', async (c) => {
     range,
     sales,
     orders: rangeOrders.length,
-    averageTicket: rangeOrders.length ? sales / rangeOrders.length : 0,
+    averageTicket: paidOrders.length ? sales / paidOrders.length : 0,
     pending,
+    paidOrders: paidOrders.length,
+    pendingPaymentOrders: pendingPaymentOrders.length,
+    pendingPaymentAmount,
     totalProducts,
     availableProducts,
     recentOrders,
@@ -417,7 +430,7 @@ app.get('/admin/dashboard', async (c) => {
     paymentBreakdown: Object.fromEntries(
       ['CASH', 'YAPE'].map((method) => [
         method,
-        rangeOrders
+        paidOrders
           .filter((order) => order.paymentMethod === method)
           .reduce((total, order) => total + Number(order.total) + Number(order.deliveryFee), 0),
       ]),
@@ -425,7 +438,7 @@ app.get('/admin/dashboard', async (c) => {
     statusBreakdown: Object.fromEntries(
       ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'].map((status) => [
         status,
-        rangeOrders.filter((order) => order.status === status).length,
+        periodOrders.filter((order) => order.status === status).length,
       ]),
     ),
   });

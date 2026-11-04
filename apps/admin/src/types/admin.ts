@@ -69,6 +69,9 @@ export type Dashboard = {
   orders: number;
   averageTicket: number;
   pending: number;
+  paidOrders: number;
+  pendingPaymentOrders: number;
+  pendingPaymentAmount: number;
   totalProducts: number;
   availableProducts: number;
   recentOrders: Order[];

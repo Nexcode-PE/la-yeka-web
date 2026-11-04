@@ -22,7 +22,7 @@ export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: 
         <div>
           <p className="text-sm font-bold text-slate-900">Resumen de ventas</p>
           <p className="text-xs text-slate-500">
-            Indicadores calculados desde pedidos registrados.
+            Datos reales de pedidos y cobros registrados en PostgreSQL.
           </p>
         </div>
         <div className="flex rounded-lg bg-slate-100 p-1">
@@ -37,21 +37,18 @@ export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: 
           ))}
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <Stat
           value={`S/ ${dashboard.sales.toFixed(2)}`}
-          label={`Ventas: ${rangeLabels[range].toLowerCase()}`}
+          label={`Cobrado: ${rangeLabels[range].toLowerCase()}`}
         />
         <Stat
           value={dashboard.orders}
           label={`Pedidos: ${rangeLabels[range].toLowerCase()}`}
           tone="green"
         />
-        <Stat
-          value={`S/ ${dashboard.averageTicket.toFixed(2)}`}
-          label="Ticket promedio"
-          tone="gray"
-        />
+        <Stat value={dashboard.paidOrders} label="Pedidos cobrados" tone="green" />
+        <Stat value={`S/ ${dashboard.pendingPaymentAmount.toFixed(2)}`} label={`Por cobrar · ${dashboard.pendingPaymentOrders}`} tone="gray" />
         <Stat value={dashboard.pending} label="Por atender ahora" tone="amber" />
       </div>
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_0.9fr]">
@@ -78,7 +75,7 @@ export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: 
                   <p className="font-bold">
                     {order.customerName || 'Cliente sin nombre'}{' '}
                     <span className="font-mono text-xs text-slate-400">
-                      #{order.id.slice(0, 8)}
+                      YEKA-{String(order.orderNumber).padStart(6, '0')}
                     </span>
                   </p>
                   <p className="text-sm text-slate-500">
@@ -86,7 +83,7 @@ export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: 
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-black">S/ {Number(order.total).toFixed(2)}</p>
+                  <p className="font-black">S/ {(Number(order.total) + Number(order.deliveryFee || 0)).toFixed(2)}</p>
                   <p className="text-xs font-bold text-[#4169ff]">{labels[order.status]}</p>
                 </div>
               </article>
