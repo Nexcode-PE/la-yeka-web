@@ -666,6 +666,7 @@ function App() {
               src="https://www.openstreetmap.org/export/embed.html?bbox=-76.1432%2C-13.4232%2C-76.1244%2C-13.4124&layer=mapnik&marker=-13.41781595%2C-76.1336172"
               loading="lazy"
             />
+            <span className="map-badge"><MapPin size={14} /> La Yeka · Chincha Alta</span>
           </a>
         </section>
         <footer>
@@ -1206,7 +1207,13 @@ function App() {
                       type="button"
                       onClick={continueWithGoogle}
                     >
-                      <span aria-hidden="true">G</span> Continuar con Google
+                      <svg className="google-mark" viewBox="0 0 48 48" aria-hidden="true">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.2 3.6l6.85-6.85C35.9 2.38 30.35 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.1 24.55c0-1.64-.15-3.22-.43-4.73H24v9.03h12.4c-.53 2.88-2.15 5.32-4.58 6.95l7.4 5.74C43.55 37.55 46.1 31.62 46.1 24.55z" />
+                        <path fill="#FBBC05" d="M10.54 28.59A14.45 14.45 0 0 1 9.73 24c0-1.59.27-3.14.81-4.59l-7.98-6.19A24.05 24.05 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.98-6.19z" />
+                        <path fill="#34A853" d="M24 48c6.35 0 11.68-2.1 15.58-5.7l-7.4-5.74c-2.06 1.38-4.7 2.2-8.18 2.2-6.26 0-11.57-4.22-13.46-9.89l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                      </svg>
+                      Continuar con Google
                     </button>
                     <button
                       className="wide border-0 bg-transparent text-sm font-bold underline"
