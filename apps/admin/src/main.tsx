@@ -25,7 +25,6 @@ import {
   Settings2,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   TriangleAlert,
   Trash2,
   Upload,
@@ -608,8 +607,8 @@ function Admin() {
         <section className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-[28px] sm:grid-cols-[0.92fr_1.08fr]">
           <aside className="login-brand relative hidden min-h-[600px] flex-col justify-between overflow-hidden p-10 text-white sm:flex">
             <div className="relative z-10 flex items-center gap-3">
-              <div className="grid size-11 place-items-center rounded-2xl border border-amber-300/30 bg-white/10 backdrop-blur">
-                <Sparkles size={20} className="text-amber-300" />
+              <div className="grid h-12 w-14 place-items-center overflow-hidden rounded-xl border border-amber-300/30 bg-black/25 px-1 backdrop-blur">
+                <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
               </div>
               <span className="text-xs font-bold tracking-[0.2em] text-amber-100">LA YEKA · ADMIN</span>
             </div>
@@ -633,8 +632,8 @@ function Admin() {
               <img src={brandLogo} alt="La Yeka" className="h-16 w-auto object-contain" />
             </div>
             <div className="my-auto max-w-sm pt-10 sm:pt-0">
-              <div className="mb-5 flex items-center gap-2 text-[11px] font-extrabold tracking-[0.16em] text-[#4169ff]">
-                <span className="grid size-7 place-items-center rounded-lg bg-[#eef2ff]"><ShieldCheck size={16} /></span>
+              <div className="mb-5 flex items-center gap-2 text-[11px] font-extrabold tracking-[0.16em] text-[#b86d00]">
+                <span className="grid size-7 place-items-center rounded-lg bg-[#fff2cf]"><ShieldCheck size={16} /></span>
                 ACCESO SEGURO
               </div>
               <h2 className="text-3xl font-black tracking-tight text-slate-950">Bienvenido de vuelta</h2>
@@ -679,7 +678,7 @@ function Admin() {
                 </label>
                 {error && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 px-3.5 py-3 text-sm font-medium text-red-700">{error}</p>}
                 <button
-                  className="login-submit mt-1 flex h-12 items-center justify-center gap-2 rounded-xl px-4 font-bold text-white"
+                  className="login-submit mt-1 flex h-12 items-center justify-center gap-2 rounded-xl px-4 font-bold text-stone-950"
                   type="submit"
                   disabled={isAuthenticating}
                 >
