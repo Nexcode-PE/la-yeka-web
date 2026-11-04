@@ -89,18 +89,18 @@
   }
   .login-form-logo {
     display: grid;
-    width: 88px;
-    height: 68px;
+    width: 122px;
+    height: 82px;
     place-items: center;
     overflow: hidden;
     border: 1px solid rgba(247, 173, 34, 0.55);
     border-radius: 14px;
-    background: linear-gradient(145deg, #17130b, #050505);
-    box-shadow: 0 10px 22px rgba(19, 14, 4, 0.13);
+    background: linear-gradient(145deg, #ffffff, #fff7e8);
+    box-shadow: 0 10px 22px rgba(19, 14, 4, 0.1);
   }
   .login-form-logo img {
-    max-width: 76px;
-    max-height: 58px;
+    max-width: 112px;
+    max-height: 74px;
     object-fit: contain;
   }
   .login-input-wrap {
