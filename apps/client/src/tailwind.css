@@ -22,7 +22,7 @@
 
 @layer components {
   .site-header { @apply sticky top-0 z-20 border-b border-yeka-gold/25 bg-yeka-ink/95 backdrop-blur; }
-  .site-header-inner { @apply mx-auto flex h-[68px] max-w-[1440px] items-center gap-5 px-4 sm:px-6 md:h-[82px] md:px-[6vw]; }
+  .site-header-inner { @apply flex h-[68px] w-full items-center gap-5 px-4 sm:px-6 md:h-[82px] md:px-[6vw]; }
   .brand { @apply block w-[92px] shrink-0 leading-none no-underline md:w-[112px]; }
   .brand img { @apply block h-auto w-full; }
   .site-nav { @apply hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 md:flex; }
