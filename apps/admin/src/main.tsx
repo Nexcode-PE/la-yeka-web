@@ -360,6 +360,24 @@ function Admin() {
       <script>window.onload=()=>{window.focus();window.print()}<\/script></body></html>`);
     receipt.document.close();
   };
+  const printClaimReceipt = (claim: Claim) => {
+    const receipt = window.open('', `yeka-claim-${claim.id.slice(0, 8)}`, 'width=640,height=760');
+    if (!receipt) {
+      setError('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e inténtalo otra vez.');
+      return;
+    }
+    const reference = `RECLAMO-${claim.id.slice(0, 8).toUpperCase()}`;
+    receipt.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${reference}</title><style>
+      @page{size:A4;margin:18mm}*{box-sizing:border-box}body{margin:0;color:#172033;font-family:Arial,sans-serif;font-size:13px;line-height:1.45}header{border-bottom:3px solid #f7ad22;padding-bottom:14px}h1{margin:0;font-size:26px}h2{margin:0 0 6px;font-size:16px}.eyebrow{color:#b77700;font-size:10px;font-weight:800;letter-spacing:.14em}.reference{font-family:monospace;font-weight:700;color:#41506c}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin:18px 0}.label{margin:0;color:#667085;font-size:10px;font-weight:700;letter-spacing:.08em}.value{margin:3px 0 0;font-weight:600}.box{margin-top:16px;border:1px solid #dbe1ea;border-radius:8px;padding:14px}.box p{margin:4px 0;white-space:pre-wrap}footer{margin-top:28px;border-top:1px solid #dbe1ea;padding-top:12px;color:#667085;font-size:11px}</style></head><body>
+      <header><p class="eyebrow">LA YEKA · LIBRO DE RECLAMACIONES</p><h1>Constancia de registro</h1><p class="reference">${reference}</p></header>
+      <section class="grid"><div><p class="label">CONSUMIDOR</p><p class="value">${escapePrint(claim.customerName)}</p></div><div><p class="label">DOCUMENTO</p><p class="value">${escapePrint(claim.document)}</p></div><div><p class="label">CONTACTO</p><p class="value">${escapePrint(claim.email)} · ${escapePrint(claim.phone)}</p></div><div><p class="label">FECHA DE REGISTRO</p><p class="value">${escapePrint(new Date(claim.createdAt).toLocaleString('es-PE'))}</p></div><div><p class="label">TIPO</p><p class="value">${escapePrint(labels[claim.kind])}</p></div><div><p class="label">PEDIDO VINCULADO</p><p class="value">${escapePrint(claim.orderReference || 'No indicado')}</p></div></section>
+      <section class="box"><p class="label">DETALLE DECLARADO</p><p>${escapePrint(claim.detail)}</p></section>
+      <section class="box"><p class="label">SOLUCIÓN SOLICITADA</p><p>${escapePrint(claim.requestedSolution)}</p></section>
+      ${claim.adminResponse ? `<section class="box"><p class="label">RESPUESTA ADMINISTRATIVA</p><p>${escapePrint(claim.adminResponse)}</p></section>` : ''}
+      <footer>Estado actual: ${escapePrint(labels[claim.status])}. Esta constancia acredita el registro de la solicitud en el sistema de La Yeka.</footer>
+      <script>window.onload=()=>{window.focus();window.print()}<\/script></body></html>`);
+    receipt.document.close();
+  };
   const openCashShift = async (openingAmount: number, notes: string) => {
     setSavingId('cash');
     setError('');
@@ -1546,15 +1564,23 @@ function Admin() {
                           ? ` · Cerrado: ${new Date(claim.resolvedAt).toLocaleString('es-PE')}`
                           : ''}
                       </p>
-                      <button
-                        onClick={() =>
-                          void saveClaim(claim, { adminResponse: claimDrafts[claim.id] || null })
-                        }
-                        disabled={savingId === claim.id || !claimDrafts[claim.id]?.trim()}
-                        className="h-9 rounded-lg bg-[#4169ff] px-3 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {savingId === claim.id ? 'Guardando…' : 'Guardar respuesta'}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => printClaimReceipt(claim)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                        >
+                          <Printer size={15} /> Constancia
+                        </button>
+                        <button
+                          onClick={() =>
+                            void saveClaim(claim, { adminResponse: claimDrafts[claim.id] || null })
+                          }
+                          disabled={savingId === claim.id || !claimDrafts[claim.id]?.trim()}
+                          className="h-9 rounded-lg bg-[#4169ff] px-3 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {savingId === claim.id ? 'Guardando…' : 'Guardar respuesta'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </article>
