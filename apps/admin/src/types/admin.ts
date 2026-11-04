@@ -36,7 +36,7 @@ export type Order = {
   deliveryQuotedAt: string | null;
   deliveryDriver: string | null;
   estimatedMinutes: number | null;
-  items: Array<{ productName: string; quantity: number }>;
+  items: Array<{ id: string; productName: string; quantity: number; unitPrice: string }>;
   statusEvents: Array<{
     id: string;
     fromStatus: string | null;

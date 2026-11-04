@@ -119,6 +119,7 @@ function Admin() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [savingCategoryId, setSavingCategoryId] = useState('');
@@ -1389,6 +1390,12 @@ function Admin() {
                             >
                               <Printer size={15} /> Comanda / PDF
                             </button>
+                            <button
+                              onClick={() => setSelectedOrder(order)}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:border-[#aebdff] hover:bg-[#eef2ff]"
+                            >
+                              <Eye size={15} /> Ver detalle
+                            </button>
                             {!['DELIVERED', 'CANCELLED'].includes(order.status) && (
                               <button
                                 onClick={() => {
@@ -2001,6 +2008,107 @@ function Admin() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+        {selectedOrder && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="order-detail-title"
+            className="fixed inset-0 z-[60] grid place-items-end bg-slate-950/45 p-0 sm:place-items-center sm:p-4"
+          >
+            <section className="max-h-[88dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl">
+              <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur sm:px-6">
+                <div>
+                  <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">
+                    PEDIDO YEKA-{String(selectedOrder.orderNumber).padStart(6, '0')}
+                  </p>
+                  <h3 id="order-detail-title" className="mt-1 text-xl font-black text-slate-950">
+                    {selectedOrder.customerName || 'Cliente sin nombre'}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {new Date(selectedOrder.createdAt).toLocaleString('es-PE')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar detalle"
+                  onClick={() => setSelectedOrder(null)}
+                  className="grid size-10 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="grid gap-5 p-5 sm:p-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-[#eef2ff] p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#4169ff]">Estado</p>
+                    <p className="mt-1 text-sm font-black text-slate-900">{labels[selectedOrder.status]}</p>
+                  </div>
+                  <div className="rounded-xl bg-emerald-50 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Pago</p>
+                    <p className="mt-1 text-sm font-black text-slate-900">{labels[selectedOrder.paymentStatus]}</p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Total</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">S/ {Number(selectedOrder.total).toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="grid gap-3 rounded-2xl border border-slate-200 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-bold text-slate-400">CONTACTO</p>
+                    <a className="mt-1 block font-bold text-[#3156d8] hover:underline" href={`tel:${selectedOrder.customerPhone || ''}`}>
+                      {selectedOrder.customerPhone || 'Sin celular registrado'}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400">MODALIDAD</p>
+                    <p className="mt-1 font-bold text-slate-800">{labels[selectedOrder.fulfillment]}</p>
+                  </div>
+                  {selectedOrder.fulfillment === 'DELIVERY' && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold text-slate-400">DIRECCIÓN DE ENTREGA</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-800">
+                        {selectedOrder.address || 'Sin dirección'} · {selectedOrder.district || 'Sin distrito'}
+                      </p>
+                    </div>
+                  )}
+                  {selectedOrder.notes && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-bold text-slate-400">INDICACIONES</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{selectedOrder.notes}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-black text-slate-950">Productos solicitados</p>
+                    <span className="text-xs font-semibold text-slate-500">{selectedOrder.items.length} ítem(s)</span>
+                  </div>
+                  <ul className="mt-3 divide-y divide-slate-100">
+                    {selectedOrder.items.map((item) => (
+                      <li key={item.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
+                        <span className="font-semibold text-slate-800">{item.quantity}× {item.productName}</span>
+                        <span className="shrink-0 font-bold text-slate-950">S/ {(Number(item.unitPrice) * item.quantity).toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => openWhatsApp(selectedOrder)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
+                    <ExternalLink size={16} /> WhatsApp
+                  </button>
+                  <button onClick={() => printOrder(selectedOrder)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                    <Printer size={16} /> Comanda / PDF
+                  </button>
+                  {selectedOrder.paymentProofUrl && (
+                    <a href={selectedOrder.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#aebdff] bg-[#eef2ff] px-4 text-sm font-bold text-[#3156d8] hover:bg-[#dfe7ff]">
+                      <ExternalLink size={16} /> Ver voucher
+                    </a>
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         )}
         {cancellingOrder && (
