@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
+  Download,
   DollarSign,
   Menu,
   Bell,
@@ -43,6 +44,7 @@ import type {
   Claim,
   Dashboard,
   Order,
+  OrderTable,
   Product,
   StoreSettings,
   View,
@@ -87,6 +89,17 @@ function Admin() {
   const [paymentStatuses, setPaymentStatuses] = useState<Record<string, Order['paymentStatus']>>(
     {},
   );
+  const [orderQuery, setOrderQuery] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState('');
+  const [orderFulfillmentFilter, setOrderFulfillmentFilter] = useState('');
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderTable, setOrderTable] = useState<Omit<OrderTable, 'data'>>({
+    total: 0,
+    page: 1,
+    pageSize: 12,
+    totalPages: 1,
+  });
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -105,6 +118,14 @@ function Admin() {
   const knownOrderIds = useRef<Set<string> | null>(null);
   const notificationAudio = useRef<AudioContext | null>(null);
   const request = useAdminRequest(token);
+  const orderTableUrl = useMemo(() => {
+    const params = new URLSearchParams({ page: String(orderPage), pageSize: '12' });
+    if (orderQuery.trim()) params.set('query', orderQuery.trim());
+    if (orderStatusFilter) params.set('status', orderStatusFilter);
+    if (orderPaymentFilter) params.set('payment', orderPaymentFilter);
+    if (orderFulfillmentFilter) params.set('fulfillment', orderFulfillmentFilter);
+    return `/admin/orders/table?${params.toString()}`;
+  }, [orderFulfillmentFilter, orderPage, orderPaymentFilter, orderQuery, orderStatusFilter]);
   const prepareNotificationSound = useCallback(() => {
     if (typeof window === 'undefined') return;
     const context = notificationAudio.current ?? new AudioContext();
@@ -160,7 +181,11 @@ function Admin() {
         setProducts(productData);
         setCategories(categoryData);
       }
-      if (view === 'orders') setOrders(await request('/admin/orders'));
+      if (view === 'orders') {
+        const table = (await request(orderTableUrl)) as OrderTable;
+        setOrders(table.data);
+        setOrderTable({ total: table.total, page: table.page, pageSize: table.pageSize, totalPages: table.totalPages });
+      }
       if (view === 'cash') setCashData(await request('/admin/cash-shifts'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
       if (view === 'settings') setStoreSettings(await request('/admin/settings'));
@@ -171,7 +196,7 @@ function Admin() {
     } finally {
       setLoading(false);
     }
-  }, [reportRange, request, token, view]);
+  }, [orderTableUrl, reportRange, request, token, view]);
   useEffect(() => {
     load();
   }, [load]);
@@ -197,7 +222,7 @@ function Admin() {
           ? liveOrders.filter((order: Order) => !previous.has(order.id))
           : [];
         knownOrderIds.current = new Set(liveOrders.map((order: Order) => order.id));
-        setOrders(liveOrders);
+        if (view !== 'orders') setOrders(liveOrders);
         setAlerts(alertData.alerts);
         setLastSync(new Date());
         if (view === 'dashboard')
@@ -279,6 +304,27 @@ function Admin() {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
     } finally {
       setSavingId('');
+    }
+  };
+  const exportOrders = async () => {
+    setError('');
+    try {
+      const response = await fetch(`${api}/api${orderTableUrl.replace('/table', '/export')}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('No se pudo exportar los pedidos.');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `pedidos-la-yeka-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setNotice('Archivo de pedidos descargado.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo exportar los pedidos.');
     }
   };
   const openCashShift = async (openingAmount: number, notes: string) => {
@@ -1103,6 +1149,43 @@ function Admin() {
           </div>
         )}
         {view === 'orders' && (
+          <div className="grid gap-4">
+            <section className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 lg:grid-cols-[minmax(0,1fr)_10rem_10rem_10rem_auto]">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                <input
+                  value={orderQuery}
+                  onChange={(event) => { setOrderQuery(event.target.value); setOrderPage(1); }}
+                  className="h-10 w-full rounded-lg border border-stone-200 bg-stone-50 py-2 pl-10 pr-3 text-sm outline-none transition focus:border-amber-400 focus:bg-white"
+                  placeholder="Buscar cliente, celular, producto o YEKA-000123"
+                />
+              </label>
+              <select value={orderStatusFilter} onChange={(event) => { setOrderStatusFilter(event.target.value); setOrderPage(1); }} className="h-10 rounded-lg border border-stone-200 bg-white px-3 text-sm font-semibold outline-none focus:border-amber-400">
+                <option value="">Todos los estados</option>
+                {statusOptions.orders.map((status) => <option key={status} value={status}>{labels[status]}</option>)}
+              </select>
+              <select value={orderPaymentFilter} onChange={(event) => { setOrderPaymentFilter(event.target.value); setOrderPage(1); }} className="h-10 rounded-lg border border-stone-200 bg-white px-3 text-sm font-semibold outline-none focus:border-amber-400">
+                <option value="">Todo pago</option>
+                <option value="PENDING">Pago pendiente</option>
+                <option value="VERIFIED">Pago validado</option>
+                <option value="REJECTED">Pago rechazado</option>
+              </select>
+              <select value={orderFulfillmentFilter} onChange={(event) => { setOrderFulfillmentFilter(event.target.value); setOrderPage(1); }} className="h-10 rounded-lg border border-stone-200 bg-white px-3 text-sm font-semibold outline-none focus:border-amber-400">
+                <option value="">Delivery y recojo</option>
+                <option value="DELIVERY">Delivery</option>
+                <option value="PICKUP">Recojo en local</option>
+              </select>
+              <button onClick={() => void exportOrders()} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-bold text-emerald-800 hover:bg-emerald-100">
+                <Download size={16} /> Exportar
+              </button>
+            </section>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span>{orderTable.total} pedido{orderTable.total === 1 ? '' : 's'} encontrado{orderTable.total === 1 ? '' : 's'} · Página {orderTable.page} de {orderTable.totalPages}</span>
+              <div className="flex gap-2">
+                <button disabled={orderTable.page <= 1} onClick={() => setOrderPage((page) => Math.max(1, page - 1))} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-semibold disabled:cursor-not-allowed disabled:opacity-40">Anterior</button>
+                <button disabled={orderTable.page >= orderTable.totalPages} onClick={() => setOrderPage((page) => Math.min(orderTable.totalPages, page + 1))} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-semibold disabled:cursor-not-allowed disabled:opacity-40">Siguiente</button>
+              </div>
+            </div>
           <div className="order-board">
             {loading ? (
               <div className="xl:col-span-4">
@@ -1297,6 +1380,7 @@ function Admin() {
                 </section>
               ))
             )}
+          </div>
           </div>
         )}
         {view === 'cash' && (

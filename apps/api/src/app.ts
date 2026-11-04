@@ -682,22 +682,92 @@ app.delete('/admin/categories/:id', async (c) => {
     return c.json({ error: 'Categoría no encontrada.' }, 404);
   }
 });
+const orderTableFilters = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(5).max(50).default(12),
+  query: z.string().trim().max(100).default(''),
+  status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']).optional(),
+  payment: z.enum(['PENDING', 'VERIFIED', 'REJECTED']).optional(),
+  fulfillment: z.enum(['DELIVERY', 'PICKUP']).optional(),
+});
+const orderIncludes = {
+  items: true,
+  statusEvents: {
+    include: { changedBy: { select: { name: true, email: true } } },
+    orderBy: { createdAt: 'asc' as const },
+  },
+};
+const orderWhere = (filters: z.infer<typeof orderTableFilters>) => {
+  const where: Record<string, unknown> = {};
+  if (filters.status) where.status = filters.status;
+  if (filters.payment) where.paymentStatus = filters.payment;
+  if (filters.fulfillment) where.fulfillment = filters.fulfillment;
+  if (filters.query) {
+    where.OR = [
+      { customerName: { contains: filters.query, mode: 'insensitive' } },
+      { customerPhone: { contains: filters.query, mode: 'insensitive' } },
+      { items: { some: { productName: { contains: filters.query, mode: 'insensitive' } } } },
+    ];
+    const orderNumber = Number(filters.query.replace(/^YEKA-/i, ''));
+    if (Number.isInteger(orderNumber) && orderNumber > 0)
+      (where.OR as Record<string, unknown>[]).push({ orderNumber });
+  }
+  return where;
+};
 app.get('/admin/orders', async (c) => {
   if (!(await requireAdmin(c.req.header('authorization'))))
     return c.json({ error: 'No autorizado' }, 401);
   return c.json(
     await db.order.findMany({
-      include: {
-        items: true,
-        statusEvents: {
-          include: { changedBy: { select: { name: true, email: true } } },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
+      include: orderIncludes,
       orderBy: { createdAt: 'desc' },
       take: 100,
     }),
   );
+});
+app.get('/admin/orders/table', async (c) => {
+  if (!(await requireAdmin(c.req.header('authorization'))))
+    return c.json({ error: 'No autorizado' }, 401);
+  const parsed = orderTableFilters.safeParse(c.req.query());
+  if (!parsed.success) return c.json({ error: 'Filtros inválidos.' }, 400);
+  const where = orderWhere(parsed.data);
+  const [data, total] = await Promise.all([
+    db.order.findMany({
+      where,
+      include: orderIncludes,
+      orderBy: { createdAt: 'desc' },
+      skip: (parsed.data.page - 1) * parsed.data.pageSize,
+      take: parsed.data.pageSize,
+    }),
+    db.order.count({ where }),
+  ]);
+  return c.json({ data, total, page: parsed.data.page, pageSize: parsed.data.pageSize, totalPages: Math.max(1, Math.ceil(total / parsed.data.pageSize)) });
+});
+app.get('/admin/orders/export', async (c) => {
+  if (!(await requireAdmin(c.req.header('authorization'))))
+    return c.json({ error: 'No autorizado' }, 401);
+  const parsed = orderTableFilters.safeParse({ ...c.req.query(), page: '1', pageSize: '50' });
+  if (!parsed.success) return c.json({ error: 'Filtros inválidos.' }, 400);
+  const orders = await db.order.findMany({ where: orderWhere(parsed.data), include: { items: true }, orderBy: { createdAt: 'desc' }, take: 500 });
+  const csvCell = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""').replace(/^[=+\-@]/, "'$&")}"`;
+  const lines = [
+    ['Pedido', 'Fecha', 'Cliente', 'Celular', 'Modalidad', 'Pago', 'Estado pago', 'Estado pedido', 'Total', 'Productos'],
+    ...orders.map((order) => [
+      `YEKA-${String(order.orderNumber).padStart(6, '0')}`,
+      order.createdAt.toLocaleString('es-PE'),
+      order.customerName,
+      order.customerPhone,
+      order.fulfillment,
+      order.paymentMethod,
+      order.paymentStatus,
+      order.status,
+      (Number(order.total) + Number(order.deliveryFee)).toFixed(2),
+      order.items.map((item) => `${item.quantity}x ${item.productName}`).join(' | '),
+    ]),
+  ].map((row) => row.map(csvCell).join(',')).join('\n');
+  c.header('Content-Type', 'text/csv; charset=utf-8');
+  c.header('Content-Disposition', 'attachment; filename="pedidos-la-yeka.csv"');
+  return c.body(`\uFEFF${lines}`);
 });
 const deliveryAssignmentInput = z.object({
   deliveryDriver: z.string().trim().min(2).max(100).nullable().optional(),

@@ -126,6 +126,14 @@ export type CashShiftData = {
   recent: CashShift[];
 };
 
+export type OrderTable = {
+  data: Order[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
 export type AdminAlert = {
   id: string;
   kind: 'ORDER' | 'CLAIM' | 'CATALOG';
