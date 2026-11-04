@@ -1,14 +1,41 @@
 import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ArrowUp, Check, ChevronRight, Flame, LogIn, MapPin, Minus, Plus, ShoppingBag, Star, UserRound, UtensilsCrossed, X } from 'lucide-react';
+import {
+  ArrowUp,
+  Check,
+  ChevronRight,
+  Flame,
+  LogIn,
+  MapPin,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Star,
+  UserRound,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react';
 import './tailwind.css';
-import { apiBase, featuredNames, money, productVisual, whatsappNumber as defaultWhatsApp } from './lib/client-config';
+import {
+  apiBase,
+  featuredNames,
+  money,
+  productVisual,
+  whatsappNumber as defaultWhatsApp,
+} from './lib/client-config';
 import type { CartItem, OrderHistory, Product } from './types/catalog';
 
 function App() {
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [store, setStore] = useState({ businessName: 'La Yeka', whatsapp: defaultWhatsApp, address: 'Calle Mariscal Benavides 150, Chincha Alta', district: 'Chincha Alta', openingHours: 'Todos los días · 6:00 p. m. a 11:00 p. m.', deliveryNote: 'Confirma cobertura y tiempo de entrega por WhatsApp.' });
+  const [store, setStore] = useState({
+    businessName: 'La Yeka',
+    whatsapp: defaultWhatsApp,
+    address: 'Calle Mariscal Benavides 150, Chincha Alta',
+    district: 'Chincha Alta',
+    openingHours: 'Todos los días · 6:00 p. m. a 11:00 p. m.',
+    deliveryNote: 'Confirma cobertura y tiempo de entrega por WhatsApp.',
+  });
   const [active, setActive] = useState('Todo');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [open, setOpen] = useState(false);
@@ -25,8 +52,12 @@ function App() {
   const [dialog, setDialog] = useState<'terms' | 'privacy' | 'claims' | 'account' | null>(null);
   const [claimSent, setClaimSent] = useState(false);
   const [accountMode, setAccountMode] = useState<'login' | 'register'>('login');
-  const [accountName, setAccountName] = useState(() => sessionStorage.getItem('la-yeka-user-name') || '');
-  const [authToken, setAuthToken] = useState(() => sessionStorage.getItem('la-yeka-user-token') || '');
+  const [accountName, setAccountName] = useState(
+    () => sessionStorage.getItem('la-yeka-user-name') || '',
+  );
+  const [authToken, setAuthToken] = useState(
+    () => sessionStorage.getItem('la-yeka-user-token') || '',
+  );
   const [authError, setAuthError] = useState('');
   const [orderHistory, setOrderHistory] = useState<OrderHistory[]>([]);
   const [cartNotice, setCartNotice] = useState('');
@@ -34,7 +65,13 @@ function App() {
   const deleteTimeout = useRef<number | null>(null);
   const [deletingItem, setDeletingItem] = useState<string | null>(null);
   const cartButtonRef = useRef<HTMLButtonElement>(null);
-  const [burgerBuild, setBurgerBuild] = useState<{ x: number; y: number; flyX: number; flyY: number; id: number } | null>(null);
+  const [burgerBuild, setBurgerBuild] = useState<{
+    x: number;
+    y: number;
+    flyX: number;
+    flyY: number;
+    id: number;
+  } | null>(null);
   const [cartPulse, setCartPulse] = useState(false);
   const burgerBuildTimeout = useRef<number | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -43,57 +80,150 @@ function App() {
     const token = params.get('google_token');
     const error = params.get('google_error');
     if (!token && !error) return;
-    window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.pathname + window.location.search,
+    );
     if (token) {
       sessionStorage.setItem('la-yeka-user-token', token);
       setAuthToken(token);
       setDialog(null);
     }
-    if (error) { setAuthError(error); setDialog('account'); }
+    if (error) {
+      setAuthError(error);
+      setDialog('account');
+    }
   }, []);
   useEffect(() => {
     const base = apiBase;
-    if (base === null) { setCatalogState('error'); return; }
+    if (base === null) {
+      setCatalogState('error');
+      return;
+    }
     fetch(base + '/api/catalog')
-      .then((response) => { if (!response.ok) throw new Error(); return response.json(); })
+      .then((response) => {
+        if (!response.ok) throw new Error();
+        return response.json();
+      })
       .then((categories) => {
-        const next = categories.flatMap((category: { name: string; products: Array<{ id:string; name:string; description:string; price:string; imagePath?:string | null; isFeatured?:boolean }> }) => category.products.map((product) => ({ id: product.id, name: product.name, detail: product.description || '', price: Number(product.price), category: category.name, imagePath: product.imagePath, tag: product.isFeatured ? 'Favorita' : undefined })));
-        setCatalog(next); setCatalogState('ready');
+        const next = categories.flatMap(
+          (category: {
+            name: string;
+            products: Array<{
+              id: string;
+              name: string;
+              description: string;
+              price: string;
+              imagePath?: string | null;
+              isFeatured?: boolean;
+            }>;
+          }) =>
+            category.products.map((product) => ({
+              id: product.id,
+              name: product.name,
+              detail: product.description || '',
+              price: Number(product.price),
+              category: category.name,
+              imagePath: product.imagePath,
+              tag: product.isFeatured ? 'Favorita' : undefined,
+            })),
+        );
+        setCatalog(next);
+        setCatalogState('ready');
       })
       .catch(() => setCatalogState('error'));
-  }, [])
+  }, []);
   useEffect(() => {
     const base = apiBase;
     if (base === null) return;
-    fetch(base + '/api/settings').then((response) => response.ok ? response.json() : null).then((settings) => {
-      if (!settings) return;
-      setStore(settings);
-      setDistrict(settings.district || 'Chincha Alta');
-    }).catch(() => undefined);
+    fetch(base + '/api/settings')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((settings) => {
+        if (!settings) return;
+        setStore(settings);
+        setDistrict(settings.district || 'Chincha Alta');
+      })
+      .catch(() => undefined);
   }, []);
-  useEffect(() => { const base = apiBase; if (base === null || !authToken) return; const headers = { Authorization: 'Bearer ' + authToken }; Promise.all([fetch(base + '/api/auth/me', { headers }), fetch(base + '/api/orders/me', { headers })]).then(async ([profile, orders]) => { if (!profile.ok || !orders.ok) throw new Error(); const { user } = await profile.json(); setAccountName(user.name || user.email); setCustomerName(user.name || ''); setCustomerPhone(user.phone || ''); setAddress(user.deliveryAddress || ''); setDistrict(user.district || store.district || 'Chincha Alta'); setOrderHistory(await orders.json()); }).catch(() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); setOrderHistory([]); }); }, [authToken])
+  useEffect(() => {
+    const base = apiBase;
+    if (base === null || !authToken) return;
+    const headers = { Authorization: 'Bearer ' + authToken };
+    Promise.all([
+      fetch(base + '/api/auth/me', { headers }),
+      fetch(base + '/api/orders/me', { headers }),
+    ])
+      .then(async ([profile, orders]) => {
+        if (!profile.ok || !orders.ok) throw new Error();
+        const { user } = await profile.json();
+        setAccountName(user.name || user.email);
+        setCustomerName(user.name || '');
+        setCustomerPhone(user.phone || '');
+        setAddress(user.deliveryAddress || '');
+        setDistrict(user.district || store.district || 'Chincha Alta');
+        setOrderHistory(await orders.json());
+      })
+      .catch(() => {
+        sessionStorage.removeItem('la-yeka-user-token');
+        sessionStorage.removeItem('la-yeka-user-name');
+        setAuthToken('');
+        setAccountName('');
+        setOrderHistory([]);
+      });
+  }, [authToken]);
   useEffect(() => {
     const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 400);
     updateBackToTopVisibility();
     window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
     return () => window.removeEventListener('scroll', updateBackToTopVisibility);
   }, []);
-  const extras = useMemo(() => catalog.filter((product) => product.category === 'Complementos'), [catalog]);
-  const menuProducts = useMemo(() => catalog.filter((product) => product.category !== 'Complementos'), [catalog]);
-  const shown = useMemo(() => active === 'Todo' ? menuProducts : menuProducts.filter((p) => p.category === active), [active, menuProducts]);
-  const categories = useMemo(() => ['Todo', ...Array.from(new Set(menuProducts.map((product) => product.category)))], [menuProducts]);
-  const topPicks = useMemo(() => menuProducts.filter((product) => featuredNames.includes(product.name)), [menuProducts]);
+  const extras = useMemo(
+    () => catalog.filter((product) => product.category === 'Complementos'),
+    [catalog],
+  );
+  const menuProducts = useMemo(
+    () => catalog.filter((product) => product.category !== 'Complementos'),
+    [catalog],
+  );
+  const shown = useMemo(
+    () => (active === 'Todo' ? menuProducts : menuProducts.filter((p) => p.category === active)),
+    [active, menuProducts],
+  );
+  const categories = useMemo(
+    () => ['Todo', ...Array.from(new Set(menuProducts.map((product) => product.category)))],
+    [menuProducts],
+  );
+  const topPicks = useMemo(
+    () => menuProducts.filter((product) => featuredNames.includes(product.name)),
+    [menuProducts],
+  );
   const total = cart.reduce((a, i) => a + i.price * i.qty, 0);
   const count = cart.reduce((a, i) => a + i.qty, 0);
-  const hasSavedContact = Boolean(authToken && customerName.trim() && customerPhone.trim() && (fulfillment === 'PICKUP' || (address.trim() && district.trim())));
+  const hasSavedContact = Boolean(
+    authToken &&
+    customerName.trim() &&
+    customerPhone.trim() &&
+    (fulfillment === 'PICKUP' || (address.trim() && district.trim())),
+  );
   const triggerBurgerBuild = (origin: HTMLButtonElement) => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !cartButtonRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !cartButtonRef.current)
+      return;
     const source = origin.getBoundingClientRect();
     const target = cartButtonRef.current.getBoundingClientRect();
     if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
-    setBurgerBuild({ x: source.left + source.width / 2, y: source.top + source.height / 2, flyX: target.left + target.width / 2 - (source.left + source.width / 2), flyY: target.top + target.height / 2 - (source.top + source.height / 2), id: Date.now() });
+    setBurgerBuild({
+      x: source.left + source.width / 2,
+      y: source.top + source.height / 2,
+      flyX: target.left + target.width / 2 - (source.left + source.width / 2),
+      flyY: target.top + target.height / 2 - (source.top + source.height / 2),
+      id: Date.now(),
+    });
     setCartPulse(true);
-    burgerBuildTimeout.current = window.setTimeout(() => { setBurgerBuild(null); setCartPulse(false); }, 1050);
+    burgerBuildTimeout.current = window.setTimeout(() => {
+      setBurgerBuild(null);
+      setCartPulse(false);
+    }, 1050);
   };
   const add = (p: Product, origin?: HTMLButtonElement) => {
     setCart((c) => {
@@ -105,13 +235,17 @@ function App() {
     setCartNotice(`${p.name} agregado al carrito`);
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
     cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 2500);
-    if (origin && p.category !== 'Bebidas' && p.category !== 'Complementos') triggerBurgerBuild(origin);
+    if (origin && p.category !== 'Bebidas' && p.category !== 'Complementos')
+      triggerBurgerBuild(origin);
   };
-  useEffect(() => () => {
-    if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
-    if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
-    if (deleteTimeout.current !== null) window.clearTimeout(deleteTimeout.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
+      if (burgerBuildTimeout.current !== null) window.clearTimeout(burgerBuildTimeout.current);
+      if (deleteTimeout.current !== null) window.clearTimeout(deleteTimeout.current);
+    },
+    [],
+  );
   const change = (name: string, d: number) =>
     setCart((c) =>
       c.flatMap((x) =>
@@ -133,24 +267,58 @@ function App() {
   };
   const send = async () => {
     if (!cart.length) return;
-    if (!customerName.trim() || !customerPhone.trim() || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))) return;
+    if (
+      !customerName.trim() ||
+      !customerPhone.trim() ||
+      (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))
+    )
+      return;
     setSending(true);
     const api = apiBase;
     let orderId = '';
     try {
       if (api !== null && cart.every((item) => item.id)) {
-        const response = await fetch(api + '/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }, body: JSON.stringify({ customerName, customerPhone, notes: note, fulfillment, paymentMethod, paymentReference: paymentMethod === 'YAPE' ? paymentReference : undefined, address: fulfillment === 'DELIVERY' ? address : undefined, district: fulfillment === 'DELIVERY' ? district : undefined, items: cart.map((item) => ({ productId: item.id, quantity: item.qty })) }) });
+        const response = await fetch(api + '/api/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
+          body: JSON.stringify({
+            customerName,
+            customerPhone,
+            notes: note,
+            fulfillment,
+            paymentMethod,
+            paymentReference: paymentMethod === 'YAPE' ? paymentReference : undefined,
+            address: fulfillment === 'DELIVERY' ? address : undefined,
+            district: fulfillment === 'DELIVERY' ? district : undefined,
+            items: cart.map((item) => ({ productId: item.id, quantity: item.qty })),
+          }),
+        });
         if (!response.ok) throw new Error('No fue posible registrar el pedido');
         const created = await response.json();
         if (paymentMethod === 'YAPE') {
           if (!paymentProof) throw new Error('Adjunta el voucher de Yape para continuar.');
-          const form = new FormData(); form.append('proof', paymentProof);
-          const proofResponse = await fetch(`${api}/api/orders/${created.id}/payment-proof`, { method:'POST', headers:{'X-Payment-Token':created.paymentToken}, body:form });
-          if (!proofResponse.ok) { const body = await proofResponse.json().catch(() => ({})); throw new Error(body.error || 'No se pudo subir el voucher.'); }
+          const form = new FormData();
+          form.append('proof', paymentProof);
+          const proofResponse = await fetch(`${api}/api/orders/${created.id}/payment-proof`, {
+            method: 'POST',
+            headers: { 'X-Payment-Token': created.paymentToken },
+            body: form,
+          });
+          if (!proofResponse.ok) {
+            const body = await proofResponse.json().catch(() => ({}));
+            throw new Error(body.error || 'No se pudo subir el voucher.');
+          }
         }
         orderId = `YEKA-${String(created.orderNumber).padStart(6, '0')}`;
       }
-    } catch (error) { alert(error instanceof Error ? error.message : 'Error al registrar el pedido'); setSending(false); return; }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Error al registrar el pedido');
+      setSending(false);
+      return;
+    }
     const lines = cart.map((x) => `• ${x.qty}x ${x.name} — ${money(x.price * x.qty)}`).join('\n');
     const text = `¡Hola, La Yeka! Quiero hacer este pedido:${orderId ? `%0AOrden: ${orderId}` : ''}%0A%0A${encodeURIComponent(lines)}%0A%0AModalidad: ${fulfillment === 'DELIVERY' ? 'Delivery' : 'Recojo en local'}%0APago: ${paymentMethod}${paymentMethod === 'YAPE' ? `%0ACódigo Yape: ${encodeURIComponent(paymentReference)}` : ''}%0ATotal: ${encodeURIComponent(money(total))}${fulfillment === 'DELIVERY' ? `%0ADirección: ${encodeURIComponent(address + ', ' + district)}` : ''}${note ? `%0AIndicaciones: ${encodeURIComponent(note)}` : ''}`;
     setCart([]);
@@ -158,7 +326,11 @@ function App() {
     setPaymentReference('');
     setPaymentProof(null);
     setOpen(false);
-    setCartNotice(orderId ? `Pedido ${orderId} registrado. Continúa la confirmación por WhatsApp.` : 'Pedido listo. Continúa la confirmación por WhatsApp.');
+    setCartNotice(
+      orderId
+        ? `Pedido ${orderId} registrado. Continúa la confirmación por WhatsApp.`
+        : 'Pedido listo. Continúa la confirmación por WhatsApp.',
+    );
     if (cartNoticeTimeout.current !== null) window.clearTimeout(cartNoticeTimeout.current);
     cartNoticeTimeout.current = window.setTimeout(() => setCartNotice(''), 5000);
     window.open(`https://wa.me/${store.whatsapp.replace(/\D/g, '')}?text=${text}`, '_blank');
@@ -166,42 +338,88 @@ function App() {
   };
   const submitClaim = async (form: HTMLFormElement) => {
     const api = apiBase;
-    if (api === null) return alert('El Libro de Reclamaciones estará disponible al conectar la API.');
+    if (api === null)
+      return alert('El Libro de Reclamaciones estará disponible al conectar la API.');
     const data = new FormData(form);
-    const response = await fetch(api + '/api/claims', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.fromEntries(data)) });
+    const response = await fetch(api + '/api/claims', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.fromEntries(data)),
+    });
     if (!response.ok) return alert('No se pudo registrar tu solicitud.');
     setClaimSent(true);
   };
   const submitAccount = async (form: HTMLFormElement) => {
     const api = apiBase;
-    if (api === null) { setAuthError('La autenticación estará disponible cuando se conecte la API.'); return; }
+    if (api === null) {
+      setAuthError('La autenticación estará disponible cuando se conecte la API.');
+      return;
+    }
     setAuthError('');
     const data = new FormData(form);
-    const payload = { name: data.get('name'), email: data.get('email'), password: data.get('password'), phone: data.get('phone'), deliveryAddress: data.get('deliveryAddress'), district: data.get('district') };
+    const payload = {
+      name: data.get('name'),
+      email: data.get('email'),
+      password: data.get('password'),
+      phone: data.get('phone'),
+      deliveryAddress: data.get('deliveryAddress'),
+      district: data.get('district'),
+    };
     const endpoint = accountMode === 'login' ? 'login' : 'register';
-    const response = await fetch(api + '/api/auth/' + endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(accountMode === 'login' ? { email: payload.email, password: payload.password } : payload) });
+    const response = await fetch(api + '/api/auth/' + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        accountMode === 'login' ? { email: payload.email, password: payload.password } : payload,
+      ),
+    });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) { setAuthError(body.error || 'No se pudo completar la operación.'); return; }
+    if (!response.ok) {
+      setAuthError(body.error || 'No se pudo completar la operación.');
+      return;
+    }
     sessionStorage.setItem('la-yeka-user-token', body.token);
     sessionStorage.setItem('la-yeka-user-name', body.user.name || body.user.email);
-    setAuthToken(body.token); setAccountName(body.user.name || body.user.email); setDialog(null);
+    setAuthToken(body.token);
+    setAccountName(body.user.name || body.user.email);
+    setDialog(null);
   };
   const updateProfile = async (form: HTMLFormElement) => {
     const api = apiBase;
     if (api === null || !authToken) return;
     setAuthError('');
     const data = new FormData(form);
-    const response = await fetch(api + '/api/auth/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ name: data.get('name'), phone: data.get('phone'), deliveryAddress: data.get('deliveryAddress'), district: data.get('district') }) });
+    const response = await fetch(api + '/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+      body: JSON.stringify({
+        name: data.get('name'),
+        phone: data.get('phone'),
+        deliveryAddress: data.get('deliveryAddress'),
+        district: data.get('district'),
+      }),
+    });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) { setAuthError(body.error || 'No se pudieron guardar tus datos.'); return; }
+    if (!response.ok) {
+      setAuthError(body.error || 'No se pudieron guardar tus datos.');
+      return;
+    }
     setAccountName(body.user.name || body.user.email);
-    setCustomerName(body.user.name || ''); setCustomerPhone(body.user.phone || ''); setAddress(body.user.deliveryAddress || ''); setDistrict(body.user.district || store.district || 'Chincha Alta');
+    setCustomerName(body.user.name || '');
+    setCustomerPhone(body.user.phone || '');
+    setAddress(body.user.deliveryAddress || '');
+    setDistrict(body.user.district || store.district || 'Chincha Alta');
     setDialog(null);
   };
   const continueWithGoogle = () => {
     const api = apiBase;
-    if (api === null) { setAuthError('El acceso con Google estará disponible al conectar la API.'); return; }
-    window.location.assign(`${api}/api/auth/google?returnTo=${encodeURIComponent(window.location.origin)}`);
+    if (api === null) {
+      setAuthError('El acceso con Google estará disponible al conectar la API.');
+      return;
+    }
+    window.location.assign(
+      `${api}/api/auth/google?returnTo=${encodeURIComponent(window.location.origin)}`,
+    );
   };
   return (
     <>
@@ -217,10 +435,30 @@ function App() {
           <a href="#nosotros">Nosotros</a>
         </nav>
         <div className="header-actions flex items-center gap-2">
-          <button className="account-button" onClick={() => { setAuthError(''); setDialog('account'); }}>
-            {accountName ? <><UserRound size={17} /><span>{accountName}</span></> : <><LogIn size={17} /><span>Iniciar sesión</span></>}
+          <button
+            className="account-button"
+            onClick={() => {
+              setAuthError('');
+              setDialog('account');
+            }}
+          >
+            {accountName ? (
+              <>
+                <UserRound size={17} />
+                <span>{accountName}</span>
+              </>
+            ) : (
+              <>
+                <LogIn size={17} />
+                <span>Iniciar sesión</span>
+              </>
+            )}
           </button>
-          <button ref={cartButtonRef} className={`cart-button ${cartPulse ? 'cart-pulse' : ''}`} onClick={() => setOpen(true)}>
+          <button
+            ref={cartButtonRef}
+            className={`cart-button ${cartPulse ? 'cart-pulse' : ''}`}
+            onClick={() => setOpen(true)}
+          >
             <ShoppingBag size={18} />
             <b>{count}</b> Mi pedido
           </button>
@@ -263,37 +501,45 @@ function App() {
             Armar mi pedido <ChevronRight size={17} />
           </button>
         </section>
-        {topPicks.length > 0 && <section className="featured">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">LOS FAVORITOS DE LA CASA</p>
-              <h2>Las más pedidas</h2>
+        {topPicks.length > 0 && (
+          <section className="featured">
+            <div className="section-head">
+              <div>
+                <p className="eyebrow">LOS FAVORITOS DE LA CASA</p>
+                <h2>Las más pedidas</h2>
+              </div>
+              <button
+                className="text-link"
+                onClick={() => document.getElementById('carta')?.scrollIntoView()}
+              >
+                Ver toda la carta <ChevronRight size={17} />
+              </button>
             </div>
-            <button
-              className="text-link"
-              onClick={() => document.getElementById('carta')?.scrollIntoView()}
-            >
-              Ver toda la carta <ChevronRight size={17} />
-            </button>
-          </div>
-          <div className="featured-grid">
-            {topPicks.map((p) => (
-              <article key={p.name} className="featured-card">
-                {productVisual(p) ? <img src={productVisual(p)!} alt={p.name} /> : <div className="grid h-44 place-items-center bg-amber-50 text-amber-600"><UtensilsCrossed size={42} /></div>}
-                <div>
-                  <h3>{p.name}</h3>
-                  <p>{p.detail}</p>
+            <div className="featured-grid">
+              {topPicks.map((p) => (
+                <article key={p.name} className="featured-card">
+                  {productVisual(p) ? (
+                    <img src={productVisual(p)!} alt={p.name} />
+                  ) : (
+                    <div className="grid h-44 place-items-center bg-amber-50 text-amber-600">
+                      <UtensilsCrossed size={42} />
+                    </div>
+                  )}
                   <div>
-                    <strong>{money(p.price)}</strong>
-                    <button onClick={(event) => add(p, event.currentTarget)}>
-                      Agregar <Plus size={15} />
-                    </button>
+                    <h3>{p.name}</h3>
+                    <p>{p.detail}</p>
+                    <div>
+                      <strong>{money(p.price)}</strong>
+                      <button onClick={(event) => add(p, event.currentTarget)}>
+                        Agregar <Plus size={15} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
         <section className="intro" id="nosotros">
           <p className="eyebrow">DIRECTO DESDE CHINCHA ALTA</p>
           <h2>Sin poses. Con bastante queso.</h2>
@@ -322,29 +568,60 @@ function App() {
             ))}
           </div>
           <div className="grid">
-            {catalogState !== 'loading' && shown.map((p, i) => (
-              <article className={'product p' + (i % 5)} key={p.name}>
-                {p.tag && <label>{p.tag}</label>}
-                <div className={`product-art ${p.category === 'Bebidas' ? 'drink-art' : ''}`}>
-                  {productVisual(p) ? <img src={productVisual(p)!} alt={p.name} /> : <UtensilsCrossed size={42} aria-label="Producto sin imagen" />}
-                </div>
-                <div className="product-info">
-                  <div>
-                    <h3>{p.name}</h3>
-                    <p>{p.detail}</p>
+            {catalogState !== 'loading' &&
+              shown.map((p, i) => (
+                <article className={'product p' + (i % 5)} key={p.name}>
+                  {p.tag && <label>{p.tag}</label>}
+                  <div className={`product-art ${p.category === 'Bebidas' ? 'drink-art' : ''}`}>
+                    {productVisual(p) ? (
+                      <img src={productVisual(p)!} alt={p.name} />
+                    ) : (
+                      <UtensilsCrossed size={42} aria-label="Producto sin imagen" />
+                    )}
                   </div>
-                  <div className="card-bottom">
-                    <strong>{money(p.price)}</strong>
-                    <button aria-label={`Agregar ${p.name}`} onClick={(event) => add(p, event.currentTarget)}>
-                      <Plus size={19} />
-                    </button>
+                  <div className="product-info">
+                    <div>
+                      <h3>{p.name}</h3>
+                      <p>{p.detail}</p>
+                    </div>
+                    <div className="card-bottom">
+                      <strong>{money(p.price)}</strong>
+                      <button
+                        aria-label={`Agregar ${p.name}`}
+                        onClick={(event) => add(p, event.currentTarget)}
+                      >
+                        <Plus size={19} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-            {catalogState === 'loading' && Array.from({ length: 8 }, (_, index) => <article key={index} className="product animate-pulse"><div className="product-art bg-stone-200" /><div className="product-info"><div><div className="h-4 w-3/4 rounded bg-stone-200" /><div className="mt-2 h-3 w-full rounded bg-stone-100" /></div><div className="flex items-center justify-between"><div className="h-4 w-12 rounded bg-stone-200" /><div className="size-8 rounded-full bg-stone-200" /></div></div></article>)}
-            {catalogState === 'error' && <p className="col-span-full py-12 text-center text-stone-500">No pudimos cargar la carta. Inténtalo nuevamente en unos minutos.</p>}
-            {catalogState === 'ready' && shown.length === 0 && <p className="col-span-full py-12 text-center text-stone-500">Por ahora no hay productos disponibles en esta categoría.</p>}
+                </article>
+              ))}
+            {catalogState === 'loading' &&
+              Array.from({ length: 8 }, (_, index) => (
+                <article key={index} className="product animate-pulse">
+                  <div className="product-art bg-stone-200" />
+                  <div className="product-info">
+                    <div>
+                      <div className="h-4 w-3/4 rounded bg-stone-200" />
+                      <div className="mt-2 h-3 w-full rounded bg-stone-100" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-12 rounded bg-stone-200" />
+                      <div className="size-8 rounded-full bg-stone-200" />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            {catalogState === 'error' && (
+              <p className="col-span-full py-12 text-center text-stone-500">
+                No pudimos cargar la carta. Inténtalo nuevamente en unos minutos.
+              </p>
+            )}
+            {catalogState === 'ready' && shown.length === 0 && (
+              <p className="col-span-full py-12 text-center text-stone-500">
+                Por ahora no hay productos disponibles en esta categoría.
+              </p>
+            )}
           </div>
         </section>
         <section className="location-section">
@@ -469,7 +746,10 @@ function App() {
               <>
                 <div className="cart-items">
                   {cart.map((x) => (
-                    <div className={`cart-item ${deletingItem === x.name ? 'cart-item-removing' : ''}`} key={x.name}>
+                    <div
+                      className={`cart-item ${deletingItem === x.name ? 'cart-item-removing' : ''}`}
+                      key={x.name}
+                    >
                       <div>
                         <h3>{x.name}</h3>
                         <p>{money(x.price)} c/u</p>
@@ -490,21 +770,100 @@ function App() {
                         onClick={() => remove(x.name)}
                         disabled={Boolean(deletingItem)}
                       >
-                        <span className="trash-bin" aria-hidden="true"><span className="trash-food" /><span className="trash-lid" /><span className="trash-body"><i /><i /></span></span>
+                        <span className="trash-bin" aria-hidden="true">
+                          <span className="trash-food" />
+                          <span className="trash-lid" />
+                          <span className="trash-body">
+                            <i />
+                            <i />
+                          </span>
+                        </span>
                       </button>
                     </div>
                   ))}
                 </div>
                 <ExtrasPicker extras={extras} onAdd={add} />
                 <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
-                  {!authToken ? <><b className="block text-yeka-ink">Inicia sesión para continuar</b><span>Guardaremos tus datos una sola vez para tus próximos pedidos.</span></> : hasSavedContact ? <><b className="block text-yeka-ink">Pedido para {customerName}</b><span>{customerPhone} · {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}</span></> : <><b className="block text-yeka-ink">Completa tus datos de pedido</b><span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span></>}
-                  <button className="mt-2 text-xs font-bold text-yeka-gold underline" onClick={() => { setAuthError(''); setDialog('account'); }}>{!authToken ? 'Iniciar sesión o crear cuenta' : hasSavedContact ? 'Editar mis datos' : 'Completar mi perfil'}</button>
+                  {!authToken ? (
+                    <>
+                      <b className="block text-yeka-ink">Inicia sesión para continuar</b>
+                      <span>Guardaremos tus datos una sola vez para tus próximos pedidos.</span>
+                    </>
+                  ) : hasSavedContact ? (
+                    <>
+                      <b className="block text-yeka-ink">Pedido para {customerName}</b>
+                      <span>
+                        {customerPhone} ·{' '}
+                        {fulfillment === 'DELIVERY' ? `${address}, ${district}` : 'Recojo en local'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <b className="block text-yeka-ink">Completa tus datos de pedido</b>
+                      <span>Guárdalos una sola vez y los usaremos en tus próximos pedidos.</span>
+                    </>
+                  )}
+                  <button
+                    className="mt-2 text-xs font-bold text-yeka-gold underline"
+                    onClick={() => {
+                      setAuthError('');
+                      setDialog('account');
+                    }}
+                  >
+                    {!authToken
+                      ? 'Iniciar sesión o crear cuenta'
+                      : hasSavedContact
+                        ? 'Editar mis datos'
+                        : 'Completar mi perfil'}
+                  </button>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <select className="border border-stone-200 bg-white p-3 text-sm" value={fulfillment} onChange={(event) => setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')} aria-label="Modalidad de entrega"><option value="DELIVERY">Delivery</option><option value="PICKUP">Recojo en local</option></select>
-                  <select className="border border-stone-200 bg-white p-3 text-sm" value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} aria-label="Método de pago"><option value="CASH">Efectivo</option><option value="YAPE">Yape</option></select>
+                  <select
+                    className="border border-stone-200 bg-white p-3 text-sm"
+                    value={fulfillment}
+                    onChange={(event) =>
+                      setFulfillment(event.target.value as 'DELIVERY' | 'PICKUP')
+                    }
+                    aria-label="Modalidad de entrega"
+                  >
+                    <option value="DELIVERY">Delivery</option>
+                    <option value="PICKUP">Recojo en local</option>
+                  </select>
+                  <select
+                    className="border border-stone-200 bg-white p-3 text-sm"
+                    value={paymentMethod}
+                    onChange={(event) => setPaymentMethod(event.target.value)}
+                    aria-label="Método de pago"
+                  >
+                    <option value="CASH">Efectivo</option>
+                    <option value="YAPE">Yape</option>
+                  </select>
                 </div>
-                {paymentMethod === 'YAPE' && <div className="mt-2 grid gap-2"><input className="w-full border border-stone-200 bg-white p-3 text-sm" value={paymentReference} onChange={(event) => setPaymentReference(event.target.value)} placeholder="Código de operación Yape" aria-label="Código de operación Yape" /><label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">Voucher Yape<input className="mt-2 block w-full text-xs font-normal" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setPaymentProof(event.target.files?.[0] || null)} /><span className="mt-1 block text-xs font-normal text-stone-500">{paymentProof ? `Adjunto: ${paymentProof.name}` : 'JPG, PNG o WEBP; máximo 4 MB.'}</span></label></div>}
+                {paymentMethod === 'YAPE' && (
+                  <div className="mt-2 grid gap-2">
+                    <input
+                      className="w-full border border-stone-200 bg-white p-3 text-sm"
+                      value={paymentReference}
+                      onChange={(event) => setPaymentReference(event.target.value)}
+                      placeholder="Código de operación Yape"
+                      aria-label="Código de operación Yape"
+                    />
+                    <label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">
+                      Voucher Yape
+                      <input
+                        className="mt-2 block w-full text-xs font-normal"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => setPaymentProof(event.target.files?.[0] || null)}
+                      />
+                      <span className="mt-1 block text-xs font-normal text-stone-500">
+                        {paymentProof
+                          ? `Adjunto: ${paymentProof.name}`
+                          : 'JPG, PNG o WEBP; máximo 4 MB.'}
+                      </span>
+                    </label>
+                  </div>
+                )}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -514,8 +873,20 @@ function App() {
                   <span>Total</span>
                   <strong>{money(total)}</strong>
                 </div>
-                <button className="checkout" onClick={send} disabled={!authToken || sending || !customerName.trim() || !customerPhone.trim() || (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) || (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))}>
-                  {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'} <ChevronRight size={19} />
+                <button
+                  className="checkout"
+                  onClick={send}
+                  disabled={
+                    !authToken ||
+                    sending ||
+                    !customerName.trim() ||
+                    !customerPhone.trim() ||
+                    (paymentMethod === 'YAPE' && (!paymentReference.trim() || !paymentProof)) ||
+                    (fulfillment === 'DELIVERY' && (!address.trim() || !district.trim()))
+                  }
+                >
+                  {sending ? 'Registrando pedido…' : 'Enviar pedido por WhatsApp'}{' '}
+                  <ChevronRight size={19} />
                 </button>
                 <p className="secure">
                   <Star size={14} /> Revisa tu pedido antes de enviarlo
@@ -592,7 +963,9 @@ function App() {
                     className="claim-form"
                     onSubmit={(e) => {
                       e.preventDefault();
-                      submitClaim(e.currentTarget).catch(() => alert('No se pudo registrar tu solicitud.'));
+                      submitClaim(e.currentTarget).catch(() =>
+                        alert('No se pudo registrar tu solicitud.'),
+                      );
                     }}
                   >
                     <label>
@@ -629,7 +1002,11 @@ function App() {
                     </label>
                     <label className="wide">
                       Pedido del consumidor
-                      <textarea name="requestedSolution" required placeholder="Indica la solución que solicitas" />
+                      <textarea
+                        name="requestedSolution"
+                        required
+                        placeholder="Indica la solución que solicitas"
+                      />
                     </label>
                     <label className="check wide">
                       <input type="checkbox" required /> Declaro que los datos proporcionados son
@@ -645,42 +1022,186 @@ function App() {
             {dialog === 'account' && (
               <>
                 <p className="eyebrow">MI CUENTA</p>
-                <h2>{accountName ? `Hola, ${accountName}` : accountMode === 'login' ? 'Inicia sesión' : 'Crea tu cuenta'}</h2>
+                <h2>
+                  {accountName
+                    ? `Hola, ${accountName}`
+                    : accountMode === 'login'
+                      ? 'Inicia sesión'
+                      : 'Crea tu cuenta'}
+                </h2>
                 {accountName ? (
                   <div className="account-content">
-                    <p className="modal-lead">Tus datos se usan automáticamente cuando haces un pedido.</p>
+                    <p className="modal-lead">
+                      Tus datos se usan automáticamente cuando haces un pedido.
+                    </p>
                     <section className="account-profile">
-                      <div><p className="eyebrow">PERFIL DE ENTREGA</p><h3>Datos de entrega</h3></div>
-                      <form className="account-profile-form" onSubmit={(event) => { event.preventDefault(); updateProfile(event.currentTarget).catch(() => setAuthError('No se pudieron guardar tus datos.')); }}>
-                      <label>Nombre completo<input name="name" required minLength={2} defaultValue={customerName} /></label>
-                      <label>Celular<input name="phone" required minLength={7} type="tel" defaultValue={customerPhone} /></label>
-                      <label className="wide">Dirección de entrega<input name="deliveryAddress" required minLength={5} defaultValue={address} /></label>
-                      <label className="wide">Distrito<input name="district" required minLength={2} defaultValue={district} /></label>
-                      {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
-                      <button className="account-save wide" type="submit">Guardar mis datos</button>
+                      <div>
+                        <p className="eyebrow">PERFIL DE ENTREGA</p>
+                        <h3>Datos de entrega</h3>
+                      </div>
+                      <form
+                        className="account-profile-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          updateProfile(event.currentTarget).catch(() =>
+                            setAuthError('No se pudieron guardar tus datos.'),
+                          );
+                        }}
+                      >
+                        <label>
+                          Nombre completo
+                          <input name="name" required minLength={2} defaultValue={customerName} />
+                        </label>
+                        <label>
+                          Celular
+                          <input
+                            name="phone"
+                            required
+                            minLength={7}
+                            type="tel"
+                            defaultValue={customerPhone}
+                          />
+                        </label>
+                        <label className="wide">
+                          Dirección de entrega
+                          <input
+                            name="deliveryAddress"
+                            required
+                            minLength={5}
+                            defaultValue={address}
+                          />
+                        </label>
+                        <label className="wide">
+                          Distrito
+                          <input name="district" required minLength={2} defaultValue={district} />
+                        </label>
+                        {authError && (
+                          <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">
+                            {authError}
+                          </p>
+                        )}
+                        <button className="account-save wide" type="submit">
+                          Guardar mis datos
+                        </button>
                       </form>
                     </section>
                     <section className="account-orders">
                       <h3>Pedidos recientes</h3>
-                      {orderHistory.length === 0 ? <p className="mb-0 text-sm text-stone-500">Aún no tienes pedidos registrados.</p> : orderHistory.map((order) => (
-                        <article className="rounded border border-stone-200 p-3 text-sm" key={order.id}>
-                          <div className="flex items-center justify-between gap-3"><strong>YEKA-{String(order.orderNumber).padStart(6, '0')} · S/ {Number(order.total).toFixed(2)}</strong><span className="text-xs text-stone-500">{order.status}</span></div>
-                          <p className="mt-1 mb-0 text-xs text-stone-500">{order.items.map((item) => item.quantity + '× ' + item.productName).join(', ')}</p>
-                        </article>
-                      ))}
+                      {orderHistory.length === 0 ? (
+                        <p className="mb-0 text-sm text-stone-500">
+                          Aún no tienes pedidos registrados.
+                        </p>
+                      ) : (
+                        orderHistory.map((order) => (
+                          <article
+                            className="rounded border border-stone-200 p-3 text-sm"
+                            key={order.id}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <strong>
+                                YEKA-{String(order.orderNumber).padStart(6, '0')} · S/{' '}
+                                {Number(order.total).toFixed(2)}
+                              </strong>
+                              <span className="text-xs text-stone-500">{order.status}</span>
+                            </div>
+                            <p className="mt-1 mb-0 text-xs text-stone-500">
+                              {order.items
+                                .map((item) => item.quantity + '× ' + item.productName)
+                                .join(', ')}
+                            </p>
+                          </article>
+                        ))
+                      )}
                     </section>
-                    <button className="account-logout" onClick={() => { sessionStorage.removeItem('la-yeka-user-token'); sessionStorage.removeItem('la-yeka-user-name'); setAuthToken(''); setAccountName(''); }}>Cerrar sesión</button>
+                    <button
+                      className="account-logout"
+                      onClick={() => {
+                        sessionStorage.removeItem('la-yeka-user-token');
+                        sessionStorage.removeItem('la-yeka-user-name');
+                        setAuthToken('');
+                        setAccountName('');
+                      }}
+                    >
+                      Cerrar sesión
+                    </button>
                   </div>
                 ) : (
-                  <form className="claim-form" onSubmit={(event) => { event.preventDefault(); submitAccount(event.currentTarget).catch(() => setAuthError('No se pudo completar la operación.')); }}>
-                    {accountMode === 'register' && <><label className="wide">Nombre completo<input name="name" required minLength={2} /></label><label>Celular<input name="phone" required type="tel" minLength={7} /></label><label>Distrito<input name="district" required minLength={2} defaultValue={store.district} /></label><label className="wide">Dirección de entrega<input name="deliveryAddress" required minLength={5} /></label></>}
-                    <label className="wide">Correo electrónico<input name="email" type="email" required autoComplete="email" /></label>
-                    <label className="wide">Contraseña<input name="password" type="password" required minLength={10} autoComplete={accountMode === 'login' ? 'current-password' : 'new-password'} /></label>
-                    {authError && <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>}
-                    <button className="checkout wide" type="submit">{accountMode === 'login' ? 'Ingresar a mi cuenta' : 'Crear cuenta segura'}</button>
-                    <div className="wide flex items-center gap-3 text-xs text-stone-400 before:h-px before:flex-1 before:bg-stone-200 after:h-px after:flex-1 after:bg-stone-200">o</div>
-                    <button className="google-login wide" type="button" onClick={continueWithGoogle}><span aria-hidden="true">G</span> Continuar con Google</button>
-                    <button className="wide border-0 bg-transparent text-sm font-bold underline" type="button" onClick={() => { setAuthError(''); setAccountMode(accountMode === 'login' ? 'register' : 'login'); }}>{accountMode === 'login' ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}</button>
+                  <form
+                    className="claim-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      submitAccount(event.currentTarget).catch(() =>
+                        setAuthError('No se pudo completar la operación.'),
+                      );
+                    }}
+                  >
+                    {accountMode === 'register' && (
+                      <>
+                        <label className="wide">
+                          Nombre completo
+                          <input name="name" required minLength={2} />
+                        </label>
+                        <label>
+                          Celular
+                          <input name="phone" required type="tel" minLength={7} />
+                        </label>
+                        <label>
+                          Distrito
+                          <input
+                            name="district"
+                            required
+                            minLength={2}
+                            defaultValue={store.district}
+                          />
+                        </label>
+                        <label className="wide">
+                          Dirección de entrega
+                          <input name="deliveryAddress" required minLength={5} />
+                        </label>
+                      </>
+                    )}
+                    <label className="wide">
+                      Correo electrónico
+                      <input name="email" type="email" required autoComplete="email" />
+                    </label>
+                    <label className="wide">
+                      Contraseña
+                      <input
+                        name="password"
+                        type="password"
+                        required
+                        minLength={10}
+                        autoComplete={accountMode === 'login' ? 'current-password' : 'new-password'}
+                      />
+                    </label>
+                    {authError && (
+                      <p className="wide rounded bg-red-50 p-3 text-sm text-red-700">{authError}</p>
+                    )}
+                    <button className="checkout wide" type="submit">
+                      {accountMode === 'login' ? 'Ingresar a mi cuenta' : 'Crear cuenta segura'}
+                    </button>
+                    <div className="wide flex items-center gap-3 text-xs text-stone-400 before:h-px before:flex-1 before:bg-stone-200 after:h-px after:flex-1 after:bg-stone-200">
+                      o
+                    </div>
+                    <button
+                      className="google-login wide"
+                      type="button"
+                      onClick={continueWithGoogle}
+                    >
+                      <span aria-hidden="true">G</span> Continuar con Google
+                    </button>
+                    <button
+                      className="wide border-0 bg-transparent text-sm font-bold underline"
+                      type="button"
+                      onClick={() => {
+                        setAuthError('');
+                        setAccountMode(accountMode === 'login' ? 'register' : 'login');
+                      }}
+                    >
+                      {accountMode === 'login'
+                        ? '¿No tienes cuenta? Regístrate'
+                        : '¿Ya tienes cuenta? Inicia sesión'}
+                    </button>
                   </form>
                 )}
               </>
@@ -693,7 +1214,14 @@ function App() {
           key={burgerBuild.id}
           aria-hidden="true"
           className="burger-build"
-          style={{ left: burgerBuild.x, top: burgerBuild.y, '--fly-x': `${burgerBuild.flyX}px`, '--fly-y': `${burgerBuild.flyY}px` } as CSSProperties}
+          style={
+            {
+              left: burgerBuild.x,
+              top: burgerBuild.y,
+              '--fly-x': `${burgerBuild.flyX}px`,
+              '--fly-y': `${burgerBuild.flyY}px`,
+            } as CSSProperties
+          }
         >
           <span className="burger-layer burger-top" />
           <span className="burger-layer burger-sauce" />
@@ -727,6 +1255,23 @@ function App() {
 
 function ExtrasPicker({ extras, onAdd }: { extras: Product[]; onAdd: (extra: Product) => void }) {
   if (!extras.length) return null;
-  return <section className="cart-extras"><div><p className="eyebrow">HAZLO MÁS YEKA</p><h3>Agrega complementos</h3><p>Personaliza tu pedido antes de enviarlo.</p></div><div className="cart-extra-list">{extras.map((extra) => <button key={extra.id || extra.name} onClick={() => onAdd(extra)}><span>{extra.name}</span><b>+ {money(extra.price)}</b><Plus size={15} /></button>)}</div></section>;
+  return (
+    <section className="cart-extras">
+      <div>
+        <p className="eyebrow">HAZLO MÁS YEKA</p>
+        <h3>Agrega complementos</h3>
+        <p>Personaliza tu pedido antes de enviarlo.</p>
+      </div>
+      <div className="cart-extra-list">
+        {extras.map((extra) => (
+          <button key={extra.id || extra.name} onClick={() => onAdd(extra)}>
+            <span>{extra.name}</span>
+            <b>+ {money(extra.price)}</b>
+            <Plus size={15} />
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 createRoot(document.getElementById('root')!).render(<App />);

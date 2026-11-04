@@ -69,6 +69,9 @@ model Order {
   paymentReviewedAt DateTime? @map("payment_reviewed_at")
   address       String?
   district      String?
+  deliveryFee   Decimal     @default(0) @map("delivery_fee") @db.Decimal(8, 2)
+  deliveryDriver String?    @map("delivery_driver")
+  estimatedMinutes Int?     @map("estimated_minutes")
   notes         String?
   total         Decimal     @db.Decimal(8, 2)
   status        OrderStatus @default(PENDING)
@@ -78,6 +81,18 @@ model Order {
   statusEvents  OrderStatusEvent[]
   @@index([userId])
   @@map("orders")
+}
+
+model CashShift {
+  id            String   @id @default(uuid()) @db.Uuid
+  openedById    String?  @map("opened_by_id") @db.Uuid
+  openingAmount Decimal  @default(0) @map("opening_amount") @db.Decimal(8, 2)
+  closingAmount Decimal? @map("closing_amount") @db.Decimal(8, 2)
+  notes         String?
+  openedAt      DateTime @default(now()) @map("opened_at")
+  closedAt      DateTime? @map("closed_at")
+  @@index([closedAt])
+  @@map("cash_shifts")
 }
 
 model OrderStatusEvent {

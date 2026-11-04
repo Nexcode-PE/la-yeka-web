@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
+  ChefHat,
+  DollarSign,
   Menu,
   Bell,
   CheckCircle2,
@@ -22,6 +24,7 @@ import {
   ShoppingBag,
   TriangleAlert,
   Trash2,
+  Truck,
   Upload,
   UtensilsCrossed,
   UsersRound,
@@ -29,10 +32,23 @@ import {
 } from 'lucide-react';
 import './styles.css';
 import { api, brandLogo, labels, statusOptions } from './lib/admin-config';
-import type { AdminAlert, AdminUser, AuditLog, Category, Claim, Dashboard, Order, Product, StoreSettings, View } from './types/admin';
+import type {
+  AdminAlert,
+  AdminUser,
+  AuditLog,
+  CashShiftData,
+  Category,
+  Claim,
+  Dashboard,
+  Order,
+  Product,
+  StoreSettings,
+  View,
+} from './types/admin';
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
+import { CashPage, DeliveryPage, KitchenPage } from './pages/OperationsPages';
 import { CategoryManagerDialog } from './components/CategoryManagerDialog';
 
 function Admin() {
@@ -43,12 +59,15 @@ function Admin() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [claimFilter, setClaimFilter] = useState<'all' | 'RECEIVED' | 'IN_REVIEW' | 'RESOLVED'>('all');
+  const [claimFilter, setClaimFilter] = useState<'all' | 'RECEIVED' | 'IN_REVIEW' | 'RESOLVED'>(
+    'all',
+  );
   const [claimDrafts, setClaimDrafts] = useState<Record<string, string>>({});
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [team, setTeam] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [cashData, setCashData] = useState<CashShiftData | null>(null);
   const [alerts, setAlerts] = useState<AdminAlert[]>([]);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reportRange, setReportRange] = useState<'today' | 'week' | 'month'>('today');
@@ -61,7 +80,9 @@ function Admin() {
   );
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
   const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({});
-  const [paymentStatuses, setPaymentStatuses] = useState<Record<string, Order['paymentStatus']>>({});
+  const [paymentStatuses, setPaymentStatuses] = useState<Record<string, Order['paymentStatus']>>(
+    {},
+  );
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -95,26 +116,38 @@ function Admin() {
       [660, 880].forEach((frequency, index) => {
         const oscillator = context.createOscillator();
         const gain = context.createGain();
-        oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(frequency, now + index * 0.16);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, now + index * 0.16);
         gain.gain.setValueAtTime(0.0001, now + index * 0.16);
         gain.gain.exponentialRampToValueAtTime(0.11, now + index * 0.16 + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + index * 0.16 + 0.14);
         oscillator.connect(gain).connect(context.destination);
-        oscillator.start(now + index * 0.16); oscillator.stop(now + index * 0.16 + 0.16);
+        oscillator.start(now + index * 0.16);
+        oscillator.stop(now + index * 0.16 + 0.16);
       });
     };
-    if (context.state === 'suspended') void context.resume().then(play).catch(() => undefined); else play();
+    if (context.state === 'suspended')
+      void context
+        .resume()
+        .then(play)
+        .catch(() => undefined);
+    else play();
   }, [prepareNotificationSound]);
   const refreshAlerts = useCallback(async () => {
     if (!token) return;
-    try { setAlerts((await request('/admin/alerts')).alerts); } catch { /* Alerts should not interrupt the current workspace. */ }
+    try {
+      setAlerts((await request('/admin/alerts')).alerts);
+    } catch {
+      /* Alerts should not interrupt the current workspace. */
+    }
   }, [request, token]);
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError('');
     try {
-      if (view === 'dashboard') setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
+      if (view === 'dashboard')
+        setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
       if (view === 'products') {
         const [productData, categoryData] = await Promise.all([
           request('/admin/products'),
@@ -123,7 +156,8 @@ function Admin() {
         setProducts(productData);
         setCategories(categoryData);
       }
-      if (view === 'orders') setOrders(await request('/admin/orders'));
+      if (['orders', 'kitchen', 'delivery'].includes(view)) setOrders(await request('/admin/orders'));
+      if (view === 'cash') setCashData(await request('/admin/cash-shifts'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
       if (view === 'settings') setStoreSettings(await request('/admin/settings'));
       if (view === 'team') setTeam(await request('/admin/team'));
@@ -137,24 +171,38 @@ function Admin() {
   useEffect(() => {
     load();
   }, [load]);
-  useEffect(() => { refreshAlerts(); }, [refreshAlerts]);
   useEffect(() => {
-    if (!token) { knownOrderIds.current = null; setLastSync(null); return; }
+    refreshAlerts();
+  }, [refreshAlerts]);
+  useEffect(() => {
+    if (!token) {
+      knownOrderIds.current = null;
+      setLastSync(null);
+      return;
+    }
     let cancelled = false;
     const syncOperations = async () => {
       try {
-        const [liveOrders, alertData] = await Promise.all([request('/admin/orders'), request('/admin/alerts')]);
+        const [liveOrders, alertData] = await Promise.all([
+          request('/admin/orders'),
+          request('/admin/alerts'),
+        ]);
         if (cancelled) return;
         const previous = knownOrderIds.current;
-        const newOrders = previous ? liveOrders.filter((order: Order) => !previous.has(order.id)) : [];
+        const newOrders = previous
+          ? liveOrders.filter((order: Order) => !previous.has(order.id))
+          : [];
         knownOrderIds.current = new Set(liveOrders.map((order: Order) => order.id));
         setOrders(liveOrders);
         setAlerts(alertData.alerts);
         setLastSync(new Date());
-        if (view === 'dashboard') setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
+        if (view === 'dashboard')
+          setDashboard(await request(`/admin/dashboard?range=${reportRange}`));
         if (newOrders.length) {
           playNewOrderSound();
-          setNotice(`${newOrders.length === 1 ? 'Nuevo pedido recibido' : `${newOrders.length} pedidos nuevos recibidos`}.`);
+          setNotice(
+            `${newOrders.length === 1 ? 'Nuevo pedido recibido' : `${newOrders.length} pedidos nuevos recibidos`}.`,
+          );
         }
       } catch {
         /* The foreground screen keeps working if a background refresh fails. */
@@ -162,18 +210,30 @@ function Admin() {
     };
     void syncOperations();
     const interval = window.setInterval(() => void syncOperations(), 10000);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [playNewOrderSound, reportRange, request, token, view]);
-  useEffect(() => () => { void notificationAudio.current?.close(); }, []);
+  useEffect(
+    () => () => {
+      void notificationAudio.current?.close();
+    },
+    [],
+  );
   useEffect(() => {
     setDraftPrices(Object.fromEntries(products.map((product) => [product.id, product.price])));
   }, [products]);
   useEffect(() => {
-    setPaymentReferences(Object.fromEntries(orders.map((order) => [order.id, order.paymentReference || ''])));
+    setPaymentReferences(
+      Object.fromEntries(orders.map((order) => [order.id, order.paymentReference || ''])),
+    );
     setPaymentStatuses(Object.fromEntries(orders.map((order) => [order.id, order.paymentStatus])));
   }, [orders]);
   useEffect(() => {
-    setClaimDrafts(Object.fromEntries(claims.map((claim) => [claim.id, claim.adminResponse || ''])));
+    setClaimDrafts(
+      Object.fromEntries(claims.map((claim) => [claim.id, claim.adminResponse || ''])),
+    );
   }, [claims]);
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -210,6 +270,49 @@ function Admin() {
       await refreshAlerts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
+    } finally {
+      setSavingId('');
+    }
+  };
+  const saveDelivery = async (
+    order: Order,
+    data: { deliveryDriver: string | null; deliveryFee: number; estimatedMinutes: number | null },
+  ) => {
+    setSavingId(order.id);
+    setError('');
+    try {
+      await request(`/admin/orders/${order.id}/delivery`, { method: 'PATCH', body: JSON.stringify(data) });
+      setNotice('Datos de despacho guardados.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo guardar el despacho.');
+    } finally {
+      setSavingId('');
+    }
+  };
+  const openCashShift = async (openingAmount: number, notes: string) => {
+    setSavingId('cash');
+    setError('');
+    try {
+      await request('/admin/cash-shifts', { method: 'POST', body: JSON.stringify({ openingAmount, notes }) });
+      setNotice('Caja abierta correctamente.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo abrir caja.');
+    } finally {
+      setSavingId('');
+    }
+  };
+  const closeCashShift = async (closingAmount: number, notes: string) => {
+    if (!cashData?.openShift) return;
+    setSavingId('cash');
+    setError('');
+    try {
+      await request(`/admin/cash-shifts/${cashData.openShift.id}/close`, { method: 'PATCH', body: JSON.stringify({ closingAmount, notes }) });
+      setNotice('Caja cerrada correctamente.');
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo cerrar caja.');
     } finally {
       setSavingId('');
     }
@@ -369,25 +472,49 @@ function Admin() {
     window.open(`https://wa.me/${normalized}?text=${message}`, '_blank', 'noopener,noreferrer');
   };
   const savePayment = async (order: Order) => {
-    setSavingId(order.id); setError('');
+    setSavingId(order.id);
+    setError('');
     try {
-      await request(`/admin/orders/${order.id}/payment`, { method:'PATCH', body:JSON.stringify({ status:paymentStatuses[order.id] || order.paymentStatus, reference:paymentReferences[order.id] || null }) });
-      await load(); setNotice('Información de pago actualizada.');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el pago.'); }
-    finally { setSavingId(''); }
+      await request(`/admin/orders/${order.id}/payment`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: paymentStatuses[order.id] || order.paymentStatus,
+          reference: paymentReferences[order.id] || null,
+        }),
+      });
+      await load();
+      setNotice('Información de pago actualizada.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el pago.');
+    } finally {
+      setSavingId('');
+    }
   };
   const cancelOrder = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!cancellingOrder || cancelReason.trim().length < 5) return;
-    setSavingId(cancellingOrder.id); setError('');
+    setSavingId(cancellingOrder.id);
+    setError('');
     try {
-      await request(`/admin/orders/${cancellingOrder.id}`, { method:'PATCH', body:JSON.stringify({status:'CANCELLED',reason:cancelReason.trim()}) });
-      setCancellingOrder(null); setCancelReason(''); await load(); await refreshAlerts();
+      await request(`/admin/orders/${cancellingOrder.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'CANCELLED', reason: cancelReason.trim() }),
+      });
+      setCancellingOrder(null);
+      setCancelReason('');
+      await load();
+      await refreshAlerts();
       setNotice('Pedido cancelado y motivo registrado.');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo cancelar el pedido.'); }
-    finally { setSavingId(''); }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo cancelar el pedido.');
+    } finally {
+      setSavingId('');
+    }
   };
-  const saveClaim = async (claim: Claim, data: { status?: string; adminResponse?: string | null }) => {
+  const saveClaim = async (
+    claim: Claim,
+    data: { status?: string; adminResponse?: string | null },
+  ) => {
     setSavingId(claim.id);
     setError('');
     try {
@@ -410,8 +537,12 @@ function Admin() {
       const saved = await request('/admin/settings', {
         method: 'PATCH',
         body: JSON.stringify({
-          businessName: fields.get('businessName'), whatsapp: fields.get('whatsapp'), address: fields.get('address'),
-          district: fields.get('district'), openingHours: fields.get('openingHours'), deliveryNote: fields.get('deliveryNote'),
+          businessName: fields.get('businessName'),
+          whatsapp: fields.get('whatsapp'),
+          address: fields.get('address'),
+          district: fields.get('district'),
+          openingHours: fields.get('openingHours'),
+          deliveryNote: fields.get('deliveryNote'),
         }),
       });
       setStoreSettings(saved);
@@ -424,21 +555,46 @@ function Admin() {
   };
   const saveAdminUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSavingId('team'); setError('');
+    setSavingId('team');
+    setError('');
     const fields = new FormData(event.currentTarget);
-    const data = { name: fields.get('name'), ...(editingAdmin ? {} : { email: fields.get('email') }), ...(fields.get('password') ? { password: fields.get('password') } : {}) };
+    const data = {
+      name: fields.get('name'),
+      ...(editingAdmin ? {} : { email: fields.get('email') }),
+      ...(fields.get('password') ? { password: fields.get('password') } : {}),
+    };
     try {
-      await request(editingAdmin ? `/admin/team/${editingAdmin.id}` : '/admin/team', { method: editingAdmin ? 'PATCH' : 'POST', body: JSON.stringify(data) });
-      setShowTeamForm(false); setEditingAdmin(null); await load();
-      setNotice(editingAdmin ? 'Acceso administrativo actualizado.' : 'Nueva cuenta administrativa creada.');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar el acceso.'); }
-    finally { setSavingId(''); }
+      await request(editingAdmin ? `/admin/team/${editingAdmin.id}` : '/admin/team', {
+        method: editingAdmin ? 'PATCH' : 'POST',
+        body: JSON.stringify(data),
+      });
+      setShowTeamForm(false);
+      setEditingAdmin(null);
+      await load();
+      setNotice(
+        editingAdmin ? 'Acceso administrativo actualizado.' : 'Nueva cuenta administrativa creada.',
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo guardar el acceso.');
+    } finally {
+      setSavingId('');
+    }
   };
   const toggleAdminUser = async (member: AdminUser) => {
-    setSavingId(member.id); setError('');
-    try { await request(`/admin/team/${member.id}`, { method:'PATCH', body:JSON.stringify({isActive:!member.isActive}) }); await load(); setNotice(member.isActive ? 'Acceso desactivado.' : 'Acceso reactivado.'); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el acceso.'); }
-    finally { setSavingId(''); }
+    setSavingId(member.id);
+    setError('');
+    try {
+      await request(`/admin/team/${member.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive: !member.isActive }),
+      });
+      await load();
+      setNotice(member.isActive ? 'Acceso desactivado.' : 'Acceso reactivado.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'No se pudo actualizar el acceso.');
+    } finally {
+      setSavingId('');
+    }
   };
   const filteredClaims = useMemo(
     () => claims.filter((claim) => claimFilter === 'all' || claim.status === claimFilter),
@@ -520,7 +676,14 @@ function Admin() {
             </div>
           </div>
           <div className="relative flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 lg:flex" title={lastSync ? `Última sincronización: ${lastSync.toLocaleTimeString('es-PE')}` : 'Conectando actualización automática'}>
+            <div
+              className="hidden items-center gap-2 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-xs font-semibold text-emerald-200 lg:flex"
+              title={
+                lastSync
+                  ? `Última sincronización: ${lastSync.toLocaleTimeString('es-PE')}`
+                  : 'Conectando actualización automática'
+              }
+            >
               <span className="size-2 animate-pulse rounded-full bg-emerald-300" />
               En vivo
             </div>
@@ -531,9 +694,57 @@ function Admin() {
               className="relative grid size-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-amber-200 transition hover:border-amber-300/40 hover:bg-amber-400/10"
             >
               <Bell size={18} />
-              {alerts.length > 0 && <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[#4169ff] px-1 text-[10px] font-black text-white">{alerts.length > 9 ? '9+' : alerts.length}</span>}
+              {alerts.length > 0 && (
+                <span className="absolute -right-1 -top-1 grid min-w-5 place-items-center rounded-full bg-[#4169ff] px-1 text-[10px] font-black text-white">
+                  {alerts.length > 9 ? '9+' : alerts.length}
+                </span>
+              )}
             </button>
-            {alertsOpen && <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-2xl"><div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><p className="text-sm font-bold">Alertas operativas</p><p className="text-xs text-slate-500">Requieren atención del equipo.</p></div><button onClick={() => { setAlertsOpen(false); void refreshAlerts(); }} className="text-xs font-semibold text-[#4169ff]">Actualizar</button></div>{alerts.length ? <div className="max-h-80 overflow-y-auto">{alerts.map((alert) => <button key={alert.id} onClick={() => { setView(alert.view); setAlertsOpen(false); }} className="block w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 last:border-0"><div className="flex items-center justify-between gap-3"><p className="text-sm font-bold">{alert.title}</p><time className="shrink-0 text-[10px] text-slate-400">{new Date(alert.createdAt).toLocaleDateString('es-PE')}</time></div><p className="mt-1 text-xs leading-5 text-slate-500">{alert.description}</p></button>)}</div> : <p className="p-6 text-center text-sm text-slate-500">No hay alertas pendientes.</p>}</div>}
+            {alertsOpen && (
+              <div className="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-bold">Alertas operativas</p>
+                    <p className="text-xs text-slate-500">Requieren atención del equipo.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setAlertsOpen(false);
+                      void refreshAlerts();
+                    }}
+                    className="text-xs font-semibold text-[#4169ff]"
+                  >
+                    Actualizar
+                  </button>
+                </div>
+                {alerts.length ? (
+                  <div className="max-h-80 overflow-y-auto">
+                    {alerts.map((alert) => (
+                      <button
+                        key={alert.id}
+                        onClick={() => {
+                          setView(alert.view);
+                          setAlertsOpen(false);
+                        }}
+                        className="block w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 last:border-0"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-bold">{alert.title}</p>
+                          <time className="shrink-0 text-[10px] text-slate-400">
+                            {new Date(alert.createdAt).toLocaleDateString('es-PE')}
+                          </time>
+                        </div>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{alert.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="p-6 text-center text-sm text-slate-500">
+                    No hay alertas pendientes.
+                  </p>
+                )}
+              </div>
+            )}
             <button
               onClick={logout}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-amber-400/45 bg-amber-400 px-3 text-sm font-bold text-stone-950 transition hover:bg-amber-300"
@@ -582,6 +793,9 @@ function Admin() {
               { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
               { id: 'products', label: 'Catálogo', icon: Package },
               { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+              { id: 'kitchen', label: 'Cocina', icon: ChefHat },
+              { id: 'delivery', label: 'Delivery', icon: Truck },
+              { id: 'cash', label: 'Caja', icon: DollarSign },
               { id: 'claims', label: 'Reclamos', icon: ClipboardList },
               { id: 'settings', label: 'Configuración', icon: Settings2 },
               { id: 'team', label: 'Equipo', icon: UsersRound },
@@ -596,7 +810,7 @@ function Admin() {
               }}
               title={sidebarCompact ? label : undefined}
               aria-label={label}
-                className={`admin-nav-item flex h-11 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'} ${sidebarCompact ? 'justify-center xl:px-0' : ''}`}
+              className={`admin-nav-item flex h-11 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold transition-colors ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'} ${sidebarCompact ? 'justify-center xl:px-0' : ''}`}
             >
               <Icon size={18} />
               <span className={sidebarCompact ? 'xl:hidden' : ''}>{label}</span>
@@ -641,6 +855,12 @@ function Admin() {
                   ? 'Resumen de operación'
                   : view === 'orders'
                     ? 'Pedidos'
+                      : view === 'kitchen'
+                        ? 'Comandas de cocina'
+                        : view === 'delivery'
+                          ? 'Despacho y delivery'
+                          : view === 'cash'
+                            ? 'Caja por turno'
                     : view === 'claims'
                       ? 'Libro de reclamaciones'
                       : view === 'settings'
@@ -676,7 +896,15 @@ function Admin() {
             )}
           </div>
         </div>
-        {view === 'dashboard' && <DashboardPage dashboard={dashboard} loading={loading} onOrders={() => setView('orders')} range={reportRange} onRange={setReportRange} />}
+        {view === 'dashboard' && (
+          <DashboardPage
+            dashboard={dashboard}
+            loading={loading}
+            onOrders={() => setView('orders')}
+            range={reportRange}
+            onRange={setReportRange}
+          />
+        )}
         {view === 'products' && (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="mb-3 grid gap-3 sm:grid-cols-3">
@@ -729,98 +957,104 @@ function Admin() {
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 sm:p-4">
               <div className="grid grid-cols-[repeat(auto-fill,minmax(205px,1fr))] gap-4">
-                {loading ? <div className="col-span-full"><ContentSkeleton variant="cards" /></div> : filteredProducts.map((product) => (
-                  <article
-                    className="admin-card-motion group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
-                    key={product.id}
-                  >
-                    <div className="relative grid aspect-[1.35/0.9] place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
-                      {product.imagePath ? (
-                        <img
-                          src={product.imagePath}
-                          alt={product.name}
-                          className="size-full object-cover transition duration-200 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <UtensilsCrossed size={30} />
-                      )}
-                      <span
-                        className={`absolute right-2 top-2 rounded-full px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
-                      >
-                        {product.isAvailable ? 'Disponible' : 'Pausado'}
-                      </span>
-                    </div>
-                    <div className="px-1 pb-1 pt-3">
-                      <p className="truncate text-sm font-bold text-slate-950">{product.name}</p>
-                      <p className="mt-1 line-clamp-2 min-h-9 text-xs leading-4 text-slate-500">
-                        <span className="font-semibold text-[#4169ff]">
-                          {product.category?.name || 'Sin categoría'}
-                        </span>
-                        {product.description ? ` · ${product.description}` : ''}
-                      </p>
-                      <div className="mt-3 flex items-center justify-between gap-2">
-                        <span className="text-base font-bold text-slate-950">
-                          S/ {Number(product.price).toFixed(2)}
-                        </span>
-                        <button
-                          onClick={() =>
-                            update('products', product.id, { isAvailable: !product.isAvailable })
-                          }
-                          disabled={savingId === product.id}
-                          className={`rounded-md px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                {loading ? (
+                  <div className="col-span-full">
+                    <ContentSkeleton variant="cards" />
+                  </div>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <article
+                      className="admin-card-motion group overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 transition duration-200 hover:border-[#aebdff] hover:shadow-md hover:shadow-blue-100/70"
+                      key={product.id}
+                    >
+                      <div className="relative grid aspect-[1.35/0.9] place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">
+                        {product.imagePath ? (
+                          <img
+                            src={product.imagePath}
+                            alt={product.name}
+                            className="size-full object-cover transition duration-200 group-hover:scale-[1.03]"
+                          />
+                        ) : (
+                          <UtensilsCrossed size={30} />
+                        )}
+                        <span
+                          className={`absolute right-2 top-2 rounded-full px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
                         >
-                          {product.isAvailable ? 'Pausar' : 'Activar'}
-                        </button>
+                          {product.isAvailable ? 'Disponible' : 'Pausado'}
+                        </span>
                       </div>
-                      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
-                        <input
-                          aria-label={`Precio de ${product.name}`}
-                          className="h-8 min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-semibold outline-none ring-[#4169ff] focus:bg-white focus:ring-2"
-                          type="number"
-                          min="0.1"
-                          step="0.1"
-                          value={draftPrices[product.id] ?? product.price}
-                          onChange={(event) =>
-                            setDraftPrices((current) => ({
-                              ...current,
-                              [product.id]: event.target.value,
-                            }))
-                          }
-                        />
-                        {Number(draftPrices[product.id] ?? product.price) !==
-                          Number(product.price) && (
+                      <div className="px-1 pb-1 pt-3">
+                        <p className="truncate text-sm font-bold text-slate-950">{product.name}</p>
+                        <p className="mt-1 line-clamp-2 min-h-9 text-xs leading-4 text-slate-500">
+                          <span className="font-semibold text-[#4169ff]">
+                            {product.category?.name || 'Sin categoría'}
+                          </span>
+                          {product.description ? ` · ${product.description}` : ''}
+                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <span className="text-base font-bold text-slate-950">
+                            S/ {Number(product.price).toFixed(2)}
+                          </span>
                           <button
-                            title="Guardar precio"
                             onClick={() =>
-                              update('products', product.id, {
-                                price: Number(draftPrices[product.id]),
-                              })
+                              update('products', product.id, { isAvailable: !product.isAvailable })
                             }
                             disabled={savingId === product.id}
-                            className="h-8 rounded-md bg-[#4169ff] px-2 text-xs font-semibold text-white hover:bg-[#3156d8]"
+                            className={`rounded-md px-2 py-1 text-[10px] font-semibold ${product.isAvailable ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                           >
-                            Guardar
+                            {product.isAvailable ? 'Pausar' : 'Activar'}
                           </button>
-                        )}
+                        </div>
+                        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+                          <input
+                            aria-label={`Precio de ${product.name}`}
+                            className="h-8 min-w-0 flex-1 rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-semibold outline-none ring-[#4169ff] focus:bg-white focus:ring-2"
+                            type="number"
+                            min="0.1"
+                            step="0.1"
+                            value={draftPrices[product.id] ?? product.price}
+                            onChange={(event) =>
+                              setDraftPrices((current) => ({
+                                ...current,
+                                [product.id]: event.target.value,
+                              }))
+                            }
+                          />
+                          {Number(draftPrices[product.id] ?? product.price) !==
+                            Number(product.price) && (
+                            <button
+                              title="Guardar precio"
+                              onClick={() =>
+                                update('products', product.id, {
+                                  price: Number(draftPrices[product.id]),
+                                })
+                              }
+                              disabled={savingId === product.id}
+                              className="h-8 rounded-md bg-[#4169ff] px-2 text-xs font-semibold text-white hover:bg-[#3156d8]"
+                            >
+                              Guardar
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => openProductForm(product)}
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#aebdff] hover:bg-[#eef2ff]"
+                          >
+                            <Pencil size={13} /> Editar
+                          </button>
+                          <button
+                            onClick={() => deleteProduct(product)}
+                            disabled={savingId === product.id}
+                            className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 size={13} /> Eliminar
+                          </button>
+                        </div>
                       </div>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => openProductForm(product)}
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-slate-200 text-xs font-semibold text-slate-700 hover:border-[#aebdff] hover:bg-[#eef2ff]"
-                        >
-                          <Pencil size={13} /> Editar
-                        </button>
-                        <button
-                          onClick={() => deleteProduct(product)}
-                          disabled={savingId === product.id}
-                          className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-red-200 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          <Trash2 size={13} /> Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
               {!loading && filteredProducts.length === 0 && (
                 <Empty text="No encontramos productos con esos filtros." />
@@ -830,21 +1064,23 @@ function Admin() {
         )}
         {view === 'orders' && (
           <div className="order-board">
-            {loading ? <div className="xl:col-span-4"><ContentSkeleton /></div> : orders.length === 0 ? (
+            {loading ? (
+              <div className="xl:col-span-4">
+                <ContentSkeleton />
+              </div>
+            ) : orders.length === 0 ? (
               <div className="xl:col-span-4">
                 <Empty text="Aún no hay pedidos registrados." />
               </div>
             ) : (
               operationColumns.map((column) => (
-                <section
-                  key={column.title}
-                  className={`order-column border-t-4 ${column.tone}`}
-                >
+                <section key={column.title} className={`order-column border-t-4 ${column.tone}`}>
                   <div className="order-column-header">
-                    <div><p className="order-column-label">OPERACIÓN</p><h3>{column.title}</h3></div>
-                    <span className="order-column-count">
-                      {column.orders.length}
-                    </span>
+                    <div>
+                      <p className="order-column-label">OPERACIÓN</p>
+                      <h3>{column.title}</h3>
+                    </div>
+                    <span className="order-column-count">{column.orders.length}</span>
                   </div>
                   <div className="grid gap-3">
                     {column.orders.map((order) => (
@@ -865,7 +1101,19 @@ function Admin() {
                               {new Date(order.createdAt).toLocaleString('es-PE')}
                             </p>
                             <p className="order-card-badges">
-                              <span>{labels[order.fulfillment]}</span><span>{labels[order.paymentMethod]}</span><span className={order.paymentStatus === 'VERIFIED' ? 'is-verified' : order.paymentStatus === 'REJECTED' ? 'is-rejected' : 'is-pending'}>Pago {labels[order.paymentStatus]}</span>
+                              <span>{labels[order.fulfillment]}</span>
+                              <span>{labels[order.paymentMethod]}</span>
+                              <span
+                                className={
+                                  order.paymentStatus === 'VERIFIED'
+                                    ? 'is-verified'
+                                    : order.paymentStatus === 'REJECTED'
+                                      ? 'is-rejected'
+                                      : 'is-pending'
+                                }
+                              >
+                                Pago {labels[order.paymentStatus]}
+                              </span>
                             </p>
                             {order.fulfillment === 'DELIVERY' && (
                               <p className="mt-1 text-xs text-stone-500">
@@ -878,27 +1126,101 @@ function Admin() {
                                 .join(', ')}
                             </p>
                             <div className="order-payment">
-                              <div className="mb-2 flex items-center justify-between gap-2"><p>Control de pago</p>{order.paymentProofUrl && <a href={order.paymentProofUrl} target="_blank" rel="noreferrer">Ver voucher Yape</a>}</div>
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <p>Control de pago</p>
+                                {order.paymentProofUrl && (
+                                  <a href={order.paymentProofUrl} target="_blank" rel="noreferrer">
+                                    Ver voucher Yape
+                                  </a>
+                                )}
+                              </div>
                               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
-                              <input aria-label={`Referencia de pago de pedido ${order.orderNumber}`} value={paymentReferences[order.id] ?? ''} onChange={(event) => setPaymentReferences((current) => ({...current,[order.id]:event.target.value}))} placeholder={order.paymentMethod === 'YAPE' ? 'Código Yape' : 'Referencia opcional'} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#4169ff]" />
-                              <select aria-label="Estado de pago" value={paymentStatuses[order.id] || order.paymentStatus} onChange={(event) => setPaymentStatuses((current) => ({...current,[order.id]:event.target.value as Order['paymentStatus']}))} className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold outline-none focus:border-[#4169ff]"><option value="PENDING">Pendiente</option><option value="VERIFIED">Validado</option><option value="REJECTED">Rechazado</option></select>
-                              <button onClick={() => void savePayment(order)} disabled={savingId === order.id} className="h-9 rounded-md border border-[#aebdff] bg-white px-3 text-xs font-bold text-[#3156d8] hover:bg-[#eef2ff] disabled:opacity-50">Guardar pago</button>
+                                <input
+                                  aria-label={`Referencia de pago de pedido ${order.orderNumber}`}
+                                  value={paymentReferences[order.id] ?? ''}
+                                  onChange={(event) =>
+                                    setPaymentReferences((current) => ({
+                                      ...current,
+                                      [order.id]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder={
+                                    order.paymentMethod === 'YAPE'
+                                      ? 'Código Yape'
+                                      : 'Referencia opcional'
+                                  }
+                                  className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs outline-none focus:border-[#4169ff]"
+                                />
+                                <select
+                                  aria-label="Estado de pago"
+                                  value={paymentStatuses[order.id] || order.paymentStatus}
+                                  onChange={(event) =>
+                                    setPaymentStatuses((current) => ({
+                                      ...current,
+                                      [order.id]: event.target.value as Order['paymentStatus'],
+                                    }))
+                                  }
+                                  className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold outline-none focus:border-[#4169ff]"
+                                >
+                                  <option value="PENDING">Pendiente</option>
+                                  <option value="VERIFIED">Validado</option>
+                                  <option value="REJECTED">Rechazado</option>
+                                </select>
+                                <button
+                                  onClick={() => void savePayment(order)}
+                                  disabled={savingId === order.id}
+                                  className="h-9 rounded-md border border-[#aebdff] bg-white px-3 text-xs font-bold text-[#3156d8] hover:bg-[#eef2ff] disabled:opacity-50"
+                                >
+                                  Guardar pago
+                                </button>
                               </div>
                             </div>
-                            {order.statusEvents.length > 0 && <details className="mt-3 text-xs"><summary className="cursor-pointer font-bold text-slate-600">Historial de estado ({order.statusEvents.length})</summary><ol className="mt-2 grid gap-1 border-l border-slate-200 pl-3">{order.statusEvents.map((event) => <li key={event.id}><span className="font-semibold">{event.fromStatus ? `${labels[event.fromStatus]} → ` : ''}{labels[event.toStatus]}</span>{event.reason ? ` · ${event.reason}` : ''}<span className="text-slate-400"> · {new Date(event.createdAt).toLocaleString('es-PE')}{event.changedBy ? ` · ${event.changedBy.name || event.changedBy.email}` : ''}</span></li>)}</ol></details>}
+                            {order.statusEvents.length > 0 && (
+                              <details className="mt-3 text-xs">
+                                <summary className="cursor-pointer font-bold text-slate-600">
+                                  Historial de estado ({order.statusEvents.length})
+                                </summary>
+                                <ol className="mt-2 grid gap-1 border-l border-slate-200 pl-3">
+                                  {order.statusEvents.map((event) => (
+                                    <li key={event.id}>
+                                      <span className="font-semibold">
+                                        {event.fromStatus ? `${labels[event.fromStatus]} → ` : ''}
+                                        {labels[event.toStatus]}
+                                      </span>
+                                      {event.reason ? ` · ${event.reason}` : ''}
+                                      <span className="text-slate-400">
+                                        {' '}
+                                        · {new Date(event.createdAt).toLocaleString('es-PE')}
+                                        {event.changedBy
+                                          ? ` · ${event.changedBy.name || event.changedBy.email}`
+                                          : ''}
+                                      </span>
+                                    </li>
+                                  ))}
+                                </ol>
+                              </details>
+                            )}
                           </div>
                           <div className="order-actions">
                             <Status
                               value={order.status}
                               options={statusOptions.orders}
                               onChange={(status) => {
-                                if (status === 'CANCELLED') { setCancellingOrder(order); setCancelReason(''); return; }
+                                if (status === 'CANCELLED') {
+                                  setCancellingOrder(order);
+                                  setCancelReason('');
+                                  return;
+                                }
                                 update('orders', order.id, { status });
                               }}
                             />
                             {nextOrderAction[order.status] && (
                               <button
-                                onClick={() => update('orders', order.id, { status: nextOrderAction[order.status].status })}
+                                onClick={() =>
+                                  update('orders', order.id, {
+                                    status: nextOrderAction[order.status].status,
+                                  })
+                                }
                                 disabled={savingId === order.id}
                                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4169ff] px-3 py-2 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-wait disabled:opacity-60"
                               >
@@ -911,7 +1233,17 @@ function Admin() {
                             >
                               <ExternalLink size={15} /> WhatsApp
                             </button>
-                            {!['DELIVERED', 'CANCELLED'].includes(order.status) && <button onClick={() => { setCancellingOrder(order); setCancelReason(''); }} className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50">Cancelar pedido</button>}
+                            {!['DELIVERED', 'CANCELLED'].includes(order.status) && (
+                              <button
+                                onClick={() => {
+                                  setCancellingOrder(order);
+                                  setCancelReason('');
+                                }}
+                                className="inline-flex items-center justify-center rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+                              >
+                                Cancelar pedido
+                              </button>
+                            )}
                           </div>
                         </div>
                       </article>
@@ -927,37 +1259,75 @@ function Admin() {
             )}
           </div>
         )}
+        {view === 'kitchen' && (
+          <KitchenPage
+            orders={orders}
+            savingId={savingId}
+            onStatus={(order, status) => void update('orders', order.id, { status })}
+          />
+        )}
+        {view === 'delivery' && (
+          <DeliveryPage
+            orders={orders}
+            savingId={savingId}
+            onSave={(order, data) => void saveDelivery(order, data)}
+          />
+        )}
+        {view === 'cash' && (
+          <CashPage
+            data={cashData}
+            saving={savingId === 'cash'}
+            onOpen={(amount, notes) => void openCashShift(amount, notes)}
+            onClose={(amount, notes) => void closeCashShift(amount, notes)}
+          />
+        )}
         {view === 'claims' && (
           <div className="grid gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30">
               <div className="flex flex-wrap gap-2">
-                {([
-                  ['all', 'Todos'],
-                  ['RECEIVED', 'Recibidos'],
-                  ['IN_REVIEW', 'En revisión'],
-                  ['RESOLVED', 'Cerrados'],
-                ] as const).map(([value, label]) => (
+                {(
+                  [
+                    ['all', 'Todos'],
+                    ['RECEIVED', 'Recibidos'],
+                    ['IN_REVIEW', 'En revisión'],
+                    ['RESOLVED', 'Cerrados'],
+                  ] as const
+                ).map(([value, label]) => (
                   <button
                     key={value}
                     onClick={() => setClaimFilter(value)}
                     className={`rounded-lg px-3 py-2 text-xs font-bold transition ${claimFilter === value ? 'bg-[#4169ff] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                   >
-                    {label} {value === 'all' ? claims.length : claims.filter((claim) => claim.status === value).length}
+                    {label}{' '}
+                    {value === 'all'
+                      ? claims.length
+                      : claims.filter((claim) => claim.status === value).length}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-500">Responder y cerrar deja constancia en el expediente.</p>
+              <p className="text-xs text-slate-500">
+                Responder y cerrar deja constancia en el expediente.
+              </p>
             </div>
-            {loading ? <ContentSkeleton /> : filteredClaims.length === 0 ? (
+            {loading ? (
+              <ContentSkeleton />
+            ) : filteredClaims.length === 0 ? (
               <Empty text="No hay reclamos en este estado." />
             ) : (
               filteredClaims.map((claim) => (
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30" key={claim.id}>
+                <article
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30"
+                  key={claim.id}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-black">{claim.customerName} · {labels[claim.kind]}</p>
-                        <span className="font-mono text-[10px] text-slate-400">#{claim.id.slice(0, 8).toUpperCase()}</span>
+                        <p className="font-black">
+                          {claim.customerName} · {labels[claim.kind]}
+                        </p>
+                        <span className="font-mono text-[10px] text-slate-400">
+                          #{claim.id.slice(0, 8).toUpperCase()}
+                        </span>
                       </div>
                       <p className="mt-1 text-sm text-stone-500">
                         {claim.email} · {claim.phone} · DNI/Doc. {claim.document}
@@ -970,17 +1340,28 @@ function Admin() {
                     <Status
                       value={claim.status}
                       options={statusOptions.claims}
-                      onChange={(status) => void saveClaim(claim, { status, adminResponse: claimDrafts[claim.id] || undefined })}
+                      onChange={(status) =>
+                        void saveClaim(claim, {
+                          status,
+                          adminResponse: claimDrafts[claim.id] || undefined,
+                        })
+                      }
                     />
                   </div>
                   <div className="mt-4 grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2">
                     <div>
-                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">DETALLE DECLARADO</p>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">
+                        DETALLE DECLARADO
+                      </p>
                       <p className="mt-1 text-sm leading-6 text-slate-700">{claim.detail}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">SOLUCIÓN SOLICITADA</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-700">{claim.requestedSolution}</p>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-slate-400">
+                        SOLUCIÓN SOLICITADA
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-slate-700">
+                        {claim.requestedSolution}
+                      </p>
                     </div>
                   </div>
                   <div className="mt-4 grid gap-2">
@@ -988,7 +1369,12 @@ function Admin() {
                       Respuesta administrativa
                       <textarea
                         value={claimDrafts[claim.id] ?? ''}
-                        onChange={(event) => setClaimDrafts((current) => ({ ...current, [claim.id]: event.target.value }))}
+                        onChange={(event) =>
+                          setClaimDrafts((current) => ({
+                            ...current,
+                            [claim.id]: event.target.value,
+                          }))
+                        }
                         rows={3}
                         maxLength={2000}
                         placeholder="Indica la respuesta y solución propuesta para el cliente."
@@ -997,11 +1383,17 @@ function Admin() {
                     </label>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs text-slate-500">
-                        {claim.respondedAt ? `Última respuesta: ${new Date(claim.respondedAt).toLocaleString('es-PE')}` : 'Aún no se registró una respuesta.'}
-                        {claim.resolvedAt ? ` · Cerrado: ${new Date(claim.resolvedAt).toLocaleString('es-PE')}` : ''}
+                        {claim.respondedAt
+                          ? `Última respuesta: ${new Date(claim.respondedAt).toLocaleString('es-PE')}`
+                          : 'Aún no se registró una respuesta.'}
+                        {claim.resolvedAt
+                          ? ` · Cerrado: ${new Date(claim.resolvedAt).toLocaleString('es-PE')}`
+                          : ''}
                       </p>
                       <button
-                        onClick={() => void saveClaim(claim, { adminResponse: claimDrafts[claim.id] || null })}
+                        onClick={() =>
+                          void saveClaim(claim, { adminResponse: claimDrafts[claim.id] || null })
+                        }
                         disabled={savingId === claim.id || !claimDrafts[claim.id]?.trim()}
                         className="h-9 rounded-lg bg-[#4169ff] px-3 text-sm font-bold text-white hover:bg-[#3156d8] disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -1015,38 +1407,223 @@ function Admin() {
           </div>
         )}
         {view === 'settings' && (
-          <form onSubmit={saveStoreSettings} className="mx-auto w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30 sm:p-7">
+          <form
+            onSubmit={saveStoreSettings}
+            className="mx-auto w-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30 sm:p-7"
+          >
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
-              <div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">OPERACIÓN</p><h3 className="mt-1 text-xl font-bold">Datos visibles del negocio</h3><p className="mt-1 text-sm text-slate-500">Centraliza la información de contacto, delivery y atención al cliente.</p></div>
-              {storeSettings?.updatedAt && <p className="text-xs text-slate-400">Actualizado: {new Date(storeSettings.updatedAt).toLocaleString('es-PE')}</p>}
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">OPERACIÓN</p>
+                <h3 className="mt-1 text-xl font-bold">Datos visibles del negocio</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Centraliza la información de contacto, delivery y atención al cliente.
+                </p>
+              </div>
+              {storeSettings?.updatedAt && (
+                <p className="text-xs text-slate-400">
+                  Actualizado: {new Date(storeSettings.updatedAt).toLocaleString('es-PE')}
+                </p>
+              )}
             </div>
-            {loading && !storeSettings ? <div className="py-10"><ContentSkeleton /></div> : storeSettings && <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">Nombre comercial<input name="businessName" defaultValue={storeSettings.businessName} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
-              <label className="grid gap-1.5 text-sm font-bold">WhatsApp de pedidos<input name="whatsapp" defaultValue={storeSettings.whatsapp} required inputMode="tel" className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /><span className="text-xs font-normal text-slate-500">Usa código de país, por ejemplo 51974121550.</span></label>
-              <label className="grid gap-1.5 text-sm font-bold">Distrito<input name="district" defaultValue={storeSettings.district} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
-              <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">Dirección del local<input name="address" defaultValue={storeSettings.address} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
-              <label className="grid gap-1.5 text-sm font-bold">Horario de atención<input name="openingHours" defaultValue={storeSettings.openingHours} required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
-              <label className="grid gap-1.5 text-sm font-bold">Mensaje de delivery<textarea name="deliveryNote" defaultValue={storeSettings.deliveryNote} required rows={3} className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>
-            </div>}
-            {storeSettings && <div className="mt-6 flex justify-end border-t border-slate-100 pt-5"><button disabled={savingId === 'settings'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'settings' ? 'Guardando…' : 'Guardar configuración'}</button></div>}
+            {loading && !storeSettings ? (
+              <div className="py-10">
+                <ContentSkeleton />
+              </div>
+            ) : (
+              storeSettings && (
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">
+                    Nombre comercial
+                    <input
+                      name="businessName"
+                      defaultValue={storeSettings.businessName}
+                      required
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    WhatsApp de pedidos
+                    <input
+                      name="whatsapp"
+                      defaultValue={storeSettings.whatsapp}
+                      required
+                      inputMode="tel"
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                    <span className="text-xs font-normal text-slate-500">
+                      Usa código de país, por ejemplo 51974121550.
+                    </span>
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    Distrito
+                    <input
+                      name="district"
+                      defaultValue={storeSettings.district}
+                      required
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-bold sm:col-span-2">
+                    Dirección del local
+                    <input
+                      name="address"
+                      defaultValue={storeSettings.address}
+                      required
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    Horario de atención
+                    <input
+                      name="openingHours"
+                      defaultValue={storeSettings.openingHours}
+                      required
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    Mensaje de delivery
+                    <textarea
+                      name="deliveryNote"
+                      defaultValue={storeSettings.deliveryNote}
+                      required
+                      rows={3}
+                      className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                </div>
+              )
+            )}
+            {storeSettings && (
+              <div className="mt-6 flex justify-end border-t border-slate-100 pt-5">
+                <button
+                  disabled={savingId === 'settings'}
+                  className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60"
+                >
+                  {savingId === 'settings' ? 'Guardando…' : 'Guardar configuración'}
+                </button>
+              </div>
+            )}
           </form>
         )}
         {view === 'team' && (
           <div className="mx-auto w-full max-w-5xl">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-200/30">
-              <div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">ACCESOS</p><h3 className="mt-1 text-xl font-bold">Equipo administrativo</h3><p className="mt-1 text-sm text-slate-500">Solo las cuentas activas pueden ingresar y gestionar la operación.</p></div>
-              <button onClick={() => { setEditingAdmin(null); setShowTeamForm(true); }} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-bold text-white hover:bg-[#3156d8]"><Plus size={16} /> Nuevo acceso</button>
+              <div>
+                <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">ACCESOS</p>
+                <h3 className="mt-1 text-xl font-bold">Equipo administrativo</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Solo las cuentas activas pueden ingresar y gestionar la operación.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingAdmin(null);
+                  setShowTeamForm(true);
+                }}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#4169ff] px-4 text-sm font-bold text-white hover:bg-[#3156d8]"
+              >
+                <Plus size={16} /> Nuevo acceso
+              </button>
             </div>
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
-              {loading ? <div className="p-5"><ContentSkeleton /></div> : team.map((member) => <article key={member.id} className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 p-5 last:border-0"><div><div className="flex items-center gap-2"><p className="font-bold">{member.name || 'Sin nombre'}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${member.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{member.isActive ? 'Activo' : 'Desactivado'}</span></div><p className="mt-1 text-sm text-slate-500">{member.email}</p><p className="mt-1 text-xs text-slate-400">Creado: {new Date(member.createdAt).toLocaleDateString('es-PE')}</p></div><div className="flex gap-2"><button onClick={() => { setEditingAdmin(member); setShowTeamForm(true); }} className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Pencil size={14} /> Editar</button><button disabled={savingId === member.id} onClick={() => void toggleAdminUser(member)} className={`h-9 rounded-lg px-3 text-sm font-semibold ${member.isActive ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>{member.isActive ? 'Desactivar' : 'Activar'}</button></div></article>)}
-              {!loading && team.length === 0 && <Empty text="Aún no hay cuentas administrativas." />}
+              {loading ? (
+                <div className="p-5">
+                  <ContentSkeleton />
+                </div>
+              ) : (
+                team.map((member) => (
+                  <article
+                    key={member.id}
+                    className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 p-5 last:border-0"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold">{member.name || 'Sin nombre'}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${member.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
+                        >
+                          {member.isActive ? 'Activo' : 'Desactivado'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">{member.email}</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Creado: {new Date(member.createdAt).toLocaleDateString('es-PE')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingAdmin(member);
+                          setShowTeamForm(true);
+                        }}
+                        className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil size={14} /> Editar
+                      </button>
+                      <button
+                        disabled={savingId === member.id}
+                        onClick={() => void toggleAdminUser(member)}
+                        className={`h-9 rounded-lg px-3 text-sm font-semibold ${member.isActive ? 'border border-red-200 text-red-700 hover:bg-red-50' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                      >
+                        {member.isActive ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+              {!loading && team.length === 0 && (
+                <Empty text="Aún no hay cuentas administrativas." />
+              )}
             </div>
           </div>
         )}
         {view === 'audit' && (
           <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
-            <div className="border-b border-slate-100 p-5"><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">TRAZABILIDAD</p><h3 className="mt-1 text-xl font-bold">Actividad administrativa</h3><p className="mt-1 text-sm text-slate-500">Últimas 100 acciones relevantes registradas por el equipo.</p></div>
-            {loading ? <div className="p-5"><ContentSkeleton /></div> : auditLogs.length ? <div>{auditLogs.map((entry) => <article key={entry.id} className="flex gap-4 border-b border-slate-100 p-5 last:border-0"><div className="mt-1 grid size-9 shrink-0 place-items-center rounded-full bg-[#eef2ff] text-[#4169ff]"><ScrollText size={17} /></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-bold text-slate-900">{entry.detail || `${entry.action} · ${entry.entityType}`}</p><time className="text-xs text-slate-400">{new Date(entry.createdAt).toLocaleString('es-PE')}</time></div><p className="mt-1 text-sm text-slate-500">{entry.admin?.name || entry.admin?.email || 'Administrador'} · {entry.action === 'CREATE' ? 'Creación' : 'Actualización'} de {entry.entityType === 'TEAM_MEMBER' ? 'acceso de equipo' : 'configuración del negocio'}</p></div></article>)}</div> : <Empty text="Aún no hay actividad registrada. Los próximos cambios administrativos aparecerán aquí." />}
+            <div className="border-b border-slate-100 p-5">
+              <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">TRAZABILIDAD</p>
+              <h3 className="mt-1 text-xl font-bold">Actividad administrativa</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Últimas 100 acciones relevantes registradas por el equipo.
+              </p>
+            </div>
+            {loading ? (
+              <div className="p-5">
+                <ContentSkeleton />
+              </div>
+            ) : auditLogs.length ? (
+              <div>
+                {auditLogs.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className="flex gap-4 border-b border-slate-100 p-5 last:border-0"
+                  >
+                    <div className="mt-1 grid size-9 shrink-0 place-items-center rounded-full bg-[#eef2ff] text-[#4169ff]">
+                      <ScrollText size={17} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-bold text-slate-900">
+                          {entry.detail || `${entry.action} · ${entry.entityType}`}
+                        </p>
+                        <time className="text-xs text-slate-400">
+                          {new Date(entry.createdAt).toLocaleString('es-PE')}
+                        </time>
+                      </div>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {entry.admin?.name || entry.admin?.email || 'Administrador'} ·{' '}
+                        {entry.action === 'CREATE' ? 'Creación' : 'Actualización'} de{' '}
+                        {entry.entityType === 'TEAM_MEMBER'
+                          ? 'acceso de equipo'
+                          : 'configuración del negocio'}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <Empty text="Aún no hay actividad registrada. Los próximos cambios administrativos aparecerán aquí." />
+            )}
           </div>
         )}
         {showProductForm && (
@@ -1193,8 +1770,159 @@ function Admin() {
             onDelete={deleteCategory}
           />
         )}
-        {showTeamForm && <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4"><form onSubmit={saveAdminUser} className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">EQUIPO</p><h3 className="mt-1 text-xl font-bold">{editingAdmin ? 'Editar acceso' : 'Nuevo acceso administrativo'}</h3></div><button type="button" aria-label="Cerrar" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button></div><div className="mt-6 grid gap-4"><label className="grid gap-1.5 text-sm font-bold">Nombre<input name="name" defaultValue={editingAdmin?.name || ''} required minLength={2} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>{!editingAdmin && <label className="grid gap-1.5 text-sm font-bold">Correo electrónico<input name="email" type="email" required className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /></label>}<label className="grid gap-1.5 text-sm font-bold">{editingAdmin ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}<input name="password" type="password" required={!editingAdmin} minLength={10} className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2" /><span className="text-xs font-normal text-slate-500">Mínimo 10 caracteres. Compártela por un canal seguro.</span></label></div><div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => { setShowTeamForm(false); setEditingAdmin(null); }} className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button><button disabled={savingId === 'team'} className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60">{savingId === 'team' ? 'Guardando…' : editingAdmin ? 'Guardar cambios' : 'Crear acceso'}</button></div></form></div>}
-        {cancellingOrder && <div role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/45 p-4"><form onSubmit={cancelOrder} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"><div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5"><div><p className="text-[11px] font-bold tracking-[0.15em] text-red-600">PEDIDO YEKA-{String(cancellingOrder.orderNumber).padStart(6,'0')}</p><h3 id="cancel-order-title" className="mt-1 text-xl font-bold">Cancelar pedido</h3><p className="mt-1 text-sm text-slate-500">El motivo quedará registrado en el historial operativo.</p></div><button type="button" aria-label="Cerrar" onClick={() => setCancellingOrder(null)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"><X size={18} /></button></div><label className="mt-5 grid gap-1.5 text-sm font-bold">Motivo de cancelación<textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required minLength={5} maxLength={300} rows={4} placeholder="Ej.: Cliente canceló el pedido antes de la preparación." className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-red-400 focus:ring-2" /></label><div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5"><button type="button" onClick={() => setCancellingOrder(null)} className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100">Volver</button><button disabled={savingId === cancellingOrder.id || cancelReason.trim().length < 5} className="h-10 rounded-lg bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50">{savingId === cancellingOrder.id ? 'Cancelando…' : 'Confirmar cancelación'}</button></div></form></div>}
+        {showTeamForm && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4"
+          >
+            <form
+              onSubmit={saveAdminUser}
+              className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <p className="text-[11px] font-bold tracking-[0.15em] text-[#4169ff]">EQUIPO</p>
+                  <h3 className="mt-1 text-xl font-bold">
+                    {editingAdmin ? 'Editar acceso' : 'Nuevo acceso administrativo'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar"
+                  onClick={() => {
+                    setShowTeamForm(false);
+                    setEditingAdmin(null);
+                  }}
+                  className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="mt-6 grid gap-4">
+                <label className="grid gap-1.5 text-sm font-bold">
+                  Nombre
+                  <input
+                    name="name"
+                    defaultValue={editingAdmin?.name || ''}
+                    required
+                    minLength={2}
+                    className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                  />
+                </label>
+                {!editingAdmin && (
+                  <label className="grid gap-1.5 text-sm font-bold">
+                    Correo electrónico
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                    />
+                  </label>
+                )}
+                <label className="grid gap-1.5 text-sm font-bold">
+                  {editingAdmin ? 'Nueva contraseña (opcional)' : 'Contraseña temporal'}
+                  <input
+                    name="password"
+                    type="password"
+                    required={!editingAdmin}
+                    minLength={10}
+                    className="h-11 rounded-lg border border-slate-200 px-3 font-normal outline-none ring-[#4169ff] focus:ring-2"
+                  />
+                  <span className="text-xs font-normal text-slate-500">
+                    Mínimo 10 caracteres. Compártela por un canal seguro.
+                  </span>
+                </label>
+              </div>
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTeamForm(false);
+                    setEditingAdmin(null);
+                  }}
+                  className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={savingId === 'team'}
+                  className="h-10 rounded-lg bg-[#4169ff] px-5 text-sm font-bold text-white hover:bg-[#3156d8] disabled:opacity-60"
+                >
+                  {savingId === 'team'
+                    ? 'Guardando…'
+                    : editingAdmin
+                      ? 'Guardar cambios'
+                      : 'Crear acceso'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        {cancellingOrder && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-order-title"
+            className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/45 p-4"
+          >
+            <form
+              onSubmit={cancelOrder}
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                  <p className="text-[11px] font-bold tracking-[0.15em] text-red-600">
+                    PEDIDO YEKA-{String(cancellingOrder.orderNumber).padStart(6, '0')}
+                  </p>
+                  <h3 id="cancel-order-title" className="mt-1 text-xl font-bold">
+                    Cancelar pedido
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    El motivo quedará registrado en el historial operativo.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Cerrar"
+                  onClick={() => setCancellingOrder(null)}
+                  className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <label className="mt-5 grid gap-1.5 text-sm font-bold">
+                Motivo de cancelación
+                <textarea
+                  value={cancelReason}
+                  onChange={(event) => setCancelReason(event.target.value)}
+                  required
+                  minLength={5}
+                  maxLength={300}
+                  rows={4}
+                  placeholder="Ej.: Cliente canceló el pedido antes de la preparación."
+                  className="resize-none rounded-lg border border-slate-200 px-3 py-2.5 font-normal outline-none ring-red-400 focus:ring-2"
+                />
+              </label>
+              <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                <button
+                  type="button"
+                  onClick={() => setCancellingOrder(null)}
+                  className="h-10 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Volver
+                </button>
+                <button
+                  disabled={savingId === cancellingOrder.id || cancelReason.trim().length < 5}
+                  className="h-10 rounded-lg bg-red-600 px-5 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {savingId === cancellingOrder.id ? 'Cancelando…' : 'Confirmar cancelación'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </section>
       <nav
         aria-label="Navegación principal móvil"

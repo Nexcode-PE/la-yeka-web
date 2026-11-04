@@ -31,8 +31,18 @@ export type Order = {
   paymentProofUrl: string | null;
   address: string | null;
   district: string | null;
+  deliveryFee: string;
+  deliveryDriver: string | null;
+  estimatedMinutes: number | null;
   items: Array<{ productName: string; quantity: number }>;
-  statusEvents: Array<{ id: string; fromStatus: string | null; toStatus: string; reason: string | null; createdAt: string; changedBy: { name: string | null; email: string } | null }>;
+  statusEvents: Array<{
+    id: string;
+    fromStatus: string | null;
+    toStatus: string;
+    reason: string | null;
+    createdAt: string;
+    changedBy: { name: string | null; email: string } | null;
+  }>;
 };
 
 export type Claim = {
@@ -97,6 +107,21 @@ export type AuditLog = {
   admin: { name: string | null; email: string } | null;
 };
 
+export type CashShift = {
+  id: string;
+  openingAmount: string;
+  closingAmount: string | null;
+  notes: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  summary?: { cash: number; yape: number; completedOrders: number };
+};
+
+export type CashShiftData = {
+  openShift: CashShift | null;
+  recent: CashShift[];
+};
+
 export type AdminAlert = {
   id: string;
   kind: 'ORDER' | 'CLAIM' | 'CATALOG';
@@ -106,4 +131,14 @@ export type AdminAlert = {
   view: 'orders' | 'claims' | 'products';
 };
 
-export type View = 'dashboard' | 'products' | 'orders' | 'claims' | 'settings' | 'team' | 'audit';
+export type View =
+  | 'dashboard'
+  | 'products'
+  | 'orders'
+  | 'kitchen'
+  | 'delivery'
+  | 'cash'
+  | 'claims'
+  | 'settings'
+  | 'team'
+  | 'audit';
