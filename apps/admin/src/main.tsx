@@ -4,7 +4,6 @@ import {
   ClipboardList,
   Download,
   DollarSign,
-  MoreHorizontal,
   Menu,
   Bell,
   CheckCircle2,
@@ -111,6 +110,7 @@ function Admin() {
     pageSize: 12,
     totalPages: 1,
   });
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [savingId, setSavingId] = useState('');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -122,7 +122,6 @@ function Admin() {
   const [cancellingOrder, setCancellingOrder] = useState<Order | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [savingCategoryId, setSavingCategoryId] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [notice, setNotice] = useState('');
   const [lastSync, setLastSync] = useState<Date | null>(null);
@@ -873,26 +872,9 @@ function Admin() {
           </div>
         </div>
       </header>
-      {sidebarOpen && (
-        <button
-          aria-label="Cerrar navegación"
-          onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/30 xl:hidden"
-        />
-      )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-2xl transition-transform duration-200 xl:top-[68px] xl:z-30 xl:h-[calc(100vh-68px)] xl:translate-x-0 xl:shadow-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${sidebarCompact ? 'xl:w-20' : 'xl:w-60'}`}
+        className={`fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-slate-200 bg-white p-4 xl:top-[68px] xl:flex xl:h-[calc(100vh-68px)] ${sidebarCompact ? 'xl:w-20' : 'xl:w-60'}`}
       >
-        <div className="mb-6 flex items-center justify-between px-2 xl:hidden">
-          <img src={brandLogo} alt="La Yeka" className="h-10 w-auto" />
-          <button
-            aria-label="Cerrar navegación"
-            onClick={() => setSidebarOpen(false)}
-            className="grid size-9 place-items-center rounded-lg hover:bg-slate-100"
-          >
-            <X size={20} />
-          </button>
-        </div>
         <div className="mb-4 hidden items-center justify-between px-2 xl:flex">
           {!sidebarCompact && (
             <p className="text-[11px] font-bold tracking-[0.14em] text-slate-400">OPERACIÓN</p>
@@ -922,7 +904,6 @@ function Admin() {
               key={id}
               onClick={() => {
                 setView(id);
-                setSidebarOpen(false);
               }}
               title={sidebarCompact ? label : undefined}
               aria-label={label}
@@ -2088,9 +2069,9 @@ function Admin() {
       </section>
       <nav
         aria-label="Navegación principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-1 border-t border-slate-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
+        className="fixed inset-x-3 bottom-[max(env(safe-area-inset-bottom),0.75rem)] z-40 flex items-center gap-2 xl:hidden"
       >
-        <div className="grid min-w-0 flex-1 grid-cols-4">
+        <div className="grid min-w-0 flex-1 grid-cols-4 rounded-[1.35rem] border border-white/80 bg-white/75 px-1 py-1.5 shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-2xl">
           {(
             [
               { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
@@ -2101,25 +2082,52 @@ function Admin() {
           ).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setView(id)}
-              className={`grid min-h-14 place-items-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-500'}`}
+              onClick={() => {
+                setView(id);
+                setMobileMoreOpen(false);
+              }}
+              className={`grid min-h-12 place-items-center gap-0.5 rounded-xl py-1 text-[10px] font-semibold transition ${view === id ? 'bg-[#eef2ff]/95 text-[#4169ff] shadow-sm' : 'text-slate-500 hover:bg-white/70'}`}
             >
               <Icon size={19} />
               {label}
             </button>
           ))}
         </div>
-        <span className="h-9 w-px bg-slate-200" aria-hidden="true" />
         <button
           type="button"
           aria-label="Ver más opciones"
-          aria-expanded={sidebarOpen}
-          onClick={() => setSidebarOpen(true)}
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition hover:scale-105 hover:bg-[#4169ff] active:scale-95"
+          aria-expanded={mobileMoreOpen}
+          onClick={() => setMobileMoreOpen((open) => !open)}
+          className={`grid size-12 shrink-0 place-items-center rounded-full border border-white/70 text-white shadow-[0_10px_24px_rgba(15,23,42,0.25)] backdrop-blur-xl transition hover:scale-105 active:scale-95 ${mobileMoreOpen ? 'rotate-45 bg-[#4169ff]' : 'bg-slate-950/90'}`}
         >
-          <MoreHorizontal size={21} />
+          <Plus size={22} />
         </button>
       </nav>
+      {mobileMoreOpen && (
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 z-40 grid w-56 grid-cols-2 gap-2 rounded-[1.35rem] border border-white/80 bg-white/80 p-2 shadow-[0_18px_45px_rgba(15,23,42,0.2)] backdrop-blur-2xl xl:hidden">
+          {(
+            [
+              { id: 'cash', label: 'Caja', icon: DollarSign },
+              { id: 'settings', label: 'Configuración', icon: Settings2 },
+              { id: 'team', label: 'Equipo', icon: UsersRound },
+              { id: 'audit', label: 'Actividad', icon: ScrollText },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setView(id);
+                setMobileMoreOpen(false);
+              }}
+              className={`grid min-h-20 place-items-center gap-1 rounded-2xl px-2 py-2 text-center text-[11px] font-bold transition ${view === id ? 'bg-[#4169ff] text-white shadow-md shadow-blue-500/20' : 'bg-white/65 text-slate-600 hover:bg-white'}`}
+            >
+              <Icon size={19} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </main>
   );
 }
