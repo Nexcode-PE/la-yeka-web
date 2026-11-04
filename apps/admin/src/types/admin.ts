@@ -136,8 +136,6 @@ export type View =
   | 'dashboard'
   | 'products'
   | 'orders'
-  | 'kitchen'
-  | 'delivery'
   | 'cash'
   | 'claims'
   | 'settings'

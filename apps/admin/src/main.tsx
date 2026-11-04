@@ -2,7 +2,6 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 're
 import { createRoot } from 'react-dom/client';
 import {
   ClipboardList,
-  ChefHat,
   DollarSign,
   Menu,
   Bell,
@@ -24,7 +23,6 @@ import {
   ShoppingBag,
   TriangleAlert,
   Trash2,
-  Truck,
   Upload,
   UtensilsCrossed,
   UsersRound,
@@ -48,7 +46,7 @@ import type {
 import { ContentSkeleton, Empty, Stat, Status } from './components/ui';
 import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
-import { CashPage, DeliveryPage, KitchenPage } from './pages/OperationsPages';
+import { CashPage } from './pages/OperationsPages';
 import { CategoryManagerDialog } from './components/CategoryManagerDialog';
 
 function Admin() {
@@ -156,7 +154,7 @@ function Admin() {
         setProducts(productData);
         setCategories(categoryData);
       }
-      if (['orders', 'kitchen', 'delivery'].includes(view)) setOrders(await request('/admin/orders'));
+      if (view === 'orders') setOrders(await request('/admin/orders'));
       if (view === 'cash') setCashData(await request('/admin/cash-shifts'));
       if (view === 'claims') setClaims(await request('/admin/claims'));
       if (view === 'settings') setStoreSettings(await request('/admin/settings'));
@@ -270,22 +268,6 @@ function Admin() {
       await refreshAlerts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo guardar.');
-    } finally {
-      setSavingId('');
-    }
-  };
-  const saveDelivery = async (
-    order: Order,
-    data: { deliveryDriver: string | null; deliveryFee: number; estimatedMinutes: number | null },
-  ) => {
-    setSavingId(order.id);
-    setError('');
-    try {
-      await request(`/admin/orders/${order.id}/delivery`, { method: 'PATCH', body: JSON.stringify(data) });
-      setNotice('Datos de despacho guardados.');
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'No se pudo guardar el despacho.');
     } finally {
       setSavingId('');
     }
@@ -801,8 +783,6 @@ function Admin() {
               { id: 'dashboard', label: 'Resumen', icon: LayoutDashboard },
               { id: 'products', label: 'Catálogo', icon: Package },
               { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
-              { id: 'kitchen', label: 'Cocina', icon: ChefHat },
-              { id: 'delivery', label: 'Delivery', icon: Truck },
               { id: 'cash', label: 'Caja', icon: DollarSign },
               { id: 'claims', label: 'Reclamos', icon: ClipboardList },
               { id: 'settings', label: 'Configuración', icon: Settings2 },
@@ -863,12 +843,8 @@ function Admin() {
                   ? 'Resumen de operación'
                   : view === 'orders'
                     ? 'Pedidos'
-                      : view === 'kitchen'
-                        ? 'Comandas de cocina'
-                        : view === 'delivery'
-                          ? 'Despacho y delivery'
-                          : view === 'cash'
-                            ? 'Caja por turno'
+                      : view === 'cash'
+                        ? 'Caja por turno'
                     : view === 'claims'
                       ? 'Libro de reclamaciones'
                       : view === 'settings'
@@ -1266,20 +1242,6 @@ function Admin() {
               ))
             )}
           </div>
-        )}
-        {view === 'kitchen' && (
-          <KitchenPage
-            orders={orders}
-            savingId={savingId}
-            onStatus={(order, status) => void update('orders', order.id, { status })}
-          />
-        )}
-        {view === 'delivery' && (
-          <DeliveryPage
-            orders={orders}
-            savingId={savingId}
-            onSave={(order, data) => void saveDelivery(order, data)}
-          />
         )}
         {view === 'cash' && (
           <CashPage
