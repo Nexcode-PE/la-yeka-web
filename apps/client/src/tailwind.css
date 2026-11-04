@@ -21,11 +21,15 @@
 }
 
 @layer components {
-  .brand { @apply block w-[108px] leading-none no-underline md:w-[126px]; }
+  .site-header { @apply sticky top-0 z-20 border-b border-yeka-gold/25 bg-yeka-ink/95 backdrop-blur; }
+  .site-header-inner { @apply mx-auto flex h-[68px] max-w-[1440px] items-center gap-5 px-4 sm:px-6 md:h-[82px] md:px-[6vw]; }
+  .brand { @apply block w-[92px] shrink-0 leading-none no-underline md:w-[112px]; }
   .brand img { @apply block h-auto w-full; }
+  .site-nav { @apply hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1 md:flex; }
+  .site-nav a { @apply rounded-full px-4 py-2 text-sm font-bold text-stone-300 no-underline transition hover:bg-white/10 hover:text-white; }
   .header-actions { @apply ml-auto; }
-  .account-button { @apply hidden items-center gap-2 rounded-full border border-yeka-gold/60 bg-transparent px-3 py-2 text-xs font-extrabold text-white hover:bg-yeka-gold hover:text-yeka-ink md:flex; }
-  .cart-button { @apply flex h-[38px] items-center gap-2 rounded-full border-0 bg-yeka-gold px-3 py-2 text-[0px] font-extrabold text-yeka-ink md:h-auto md:px-[17px] md:py-3 md:text-xs; }
+  .account-button { @apply flex h-[38px] items-center gap-2 rounded-full border border-yeka-gold/60 bg-transparent px-3 text-xs font-extrabold text-white transition hover:border-yeka-gold hover:bg-yeka-gold hover:text-yeka-ink md:h-[42px] md:px-4; }
+  .cart-button { @apply flex h-[38px] items-center gap-2 rounded-full border-0 bg-yeka-gold px-3 py-2 text-[0px] font-extrabold text-yeka-ink shadow-[0_5px_15px_rgba(247,173,34,.18)] md:h-[42px] md:px-[17px] md:text-xs; }
   .cart-button b { @apply grid size-[19px] place-items-center rounded-full bg-yeka-ink text-[11px] text-white; }
   .eyebrow { @apply mb-[14px] flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-[1.6px] text-yeka-gold-dark; }
   .hero { @apply flex min-h-[510px] items-end bg-cover bg-center px-[22px] py-11 text-white md:min-h-[690px] md:items-center md:px-[10vw] md:py-[70px]; background-image: linear-gradient(90deg, rgba(0,0,0,.97) 0%, rgba(0,0,0,.78) 38%, rgba(0,0,0,.05) 67%), url('/images/hero-yeka.png'); background-position: 61% center; }
@@ -167,6 +171,18 @@
   .modal-card > .close { @apply absolute top-3 right-3; }
   .modal-card h2 { @apply mb-5 font-display text-[clamp(32px,7vw,48px)] leading-none tracking-[-2px]; }
   .modal-lead { @apply mb-6 text-sm leading-relaxed text-stone-600; }
+  .account-modal { max-width: 540px; border-top-width: 5px; border-radius: 24px; background: linear-gradient(145deg, #fff 0%, #fff 65%, #fff5df 100%); box-shadow: 0 26px 70px rgba(0,0,0,.3); }
+  .account-modal-head { display: flex; align-items: center; gap: 13px; padding-right: 42px; }
+  .account-modal-mark { display: grid; width: 43px; height: 43px; flex: 0 0 auto; place-items: center; border: 1px solid #f5c05d; border-radius: 13px; background: #fff3d6; color: #8f5805; }
+  .account-modal .eyebrow { margin: 0 0 5px; font-size: 10px; }
+  .account-modal h2 { margin: 0; font-size: clamp(29px, 7vw, 42px); line-height: 1; }
+  .account-auth-lead { margin: 19px 0 24px; max-width: 380px; color: #726b61; font-size: 14px; line-height: 1.6; }
+  .account-auth-form { display: grid; gap: 15px; }
+  .account-auth-form label { display: grid; gap: 7px; color: #2a251d; font-size: 12px; font-weight: 800; }
+  .account-auth-form input { width: 100%; height: 50px; border: 1px solid #ded6ca; border-radius: 11px; background: #fff; padding: 0 14px; font-size: 14px; font-weight: 500; outline: 0; transition: border-color .16s ease, box-shadow .16s ease; }
+  .account-auth-form input:focus { border-color: #e7a11b; box-shadow: 0 0 0 4px rgba(247,173,34,.14); }
+  .account-auth-form .checkout { min-height: 51px; margin-top: 4px; border-radius: 11px; justify-content: center; box-shadow: 0 9px 19px rgba(247,173,34,.26); }
+  .account-auth-form .google-login { min-height: 50px; border-radius: 11px; }
   .account-content { display: block; width: 100%; }
   .account-profile { width: 100%; border: 1px solid #e7e0d7; border-radius: 12px; background: #fffaf0; padding: 18px; }
   .account-profile .eyebrow { margin-bottom: 5px; font-size: 9px; }
@@ -203,6 +219,16 @@
   .burger-patty { @apply top-10 h-3.5 w-[76px] rounded-full bg-[#4a2014]; animation-delay: .12s; }
   .burger-lettuce { @apply top-[53px] h-2.5 w-[82px] rounded-full bg-[#4f8d2a]; animation-delay: .06s; }
   .burger-bottom { @apply top-[62px] h-3.5 w-[74px] rounded-b-[999px] bg-[#c76f28]; }
+}
+
+@media (max-width: 767px) {
+  .site-header-inner { gap: 10px; }
+  .account-button span { display: none; }
+  .account-button { width: 38px; justify-content: center; padding: 0; }
+  .account-button svg { width: 18px; height: 18px; }
+  .account-modal { border-radius: 20px 20px 0 0; }
+  .account-modal-head { align-items: flex-start; }
+  .account-auth-lead { margin-bottom: 21px; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

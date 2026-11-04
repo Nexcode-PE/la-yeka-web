@@ -424,18 +424,19 @@ function App() {
   };
   return (
     <>
-      <header className="sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-yeka-gold/30 bg-yeka-ink px-4 md:h-[88px] md:px-[7vw]">
-        <a className="brand" href="#inicio" aria-label="La Yeka">
-          <img
-            src="/images/logo-la-yeka-v2.png"
-            alt="La Yeka - ¡Con todititas las cremas! - Chincha Perú"
-          />
-        </a>
-        <nav className="hidden gap-8 text-white md:flex">
-          <a href="#carta">Carta</a>
-          <a href="#nosotros">Nosotros</a>
-        </nav>
-        <div className="header-actions flex items-center gap-2">
+      <header className="site-header">
+        <div className="site-header-inner">
+          <a className="brand" href="#inicio" aria-label="La Yeka">
+            <img
+              src="/images/logo-la-yeka-v2.png"
+              alt="La Yeka - ¡Con todititas las cremas! - Chincha Perú"
+            />
+          </a>
+          <nav className="site-nav" aria-label="Navegación principal">
+            <a href="#carta">Carta</a>
+            <a href="#nosotros">Nosotros</a>
+          </nav>
+          <div className="header-actions flex items-center gap-2">
           <button
             className="account-button"
             onClick={() => {
@@ -463,6 +464,7 @@ function App() {
             <ShoppingBag size={18} />
             <b>{count}</b> Mi pedido
           </button>
+          </div>
         </div>
       </header>
       <main id="inicio">
@@ -905,7 +907,7 @@ function App() {
       {dialog && (
         <div className="modal">
           <div className="modal-backdrop" onClick={() => setDialog(null)} />
-          <section className="modal-card">
+          <section className={`modal-card ${dialog === 'account' ? 'account-modal' : ''}`}>
             <button className="close" onClick={() => setDialog(null)}>
               <X />
             </button>
@@ -1027,14 +1029,24 @@ function App() {
             )}
             {dialog === 'account' && (
               <>
-                <p className="eyebrow">MI CUENTA</p>
-                <h2>
-                  {accountName
-                    ? `Hola, ${accountName}`
-                    : accountMode === 'login'
-                      ? 'Inicia sesión'
-                      : 'Crea tu cuenta'}
-                </h2>
+                <div className="account-modal-head">
+                  <div className="account-modal-mark"><UserRound size={20} /></div>
+                  <div>
+                    <p className="eyebrow">MI CUENTA · LA YEKA</p>
+                    <h2>
+                      {accountName
+                        ? `Hola, ${accountName}`
+                        : accountMode === 'login'
+                          ? 'Inicia sesión'
+                          : 'Crea tu cuenta'}
+                    </h2>
+                  </div>
+                </div>
+                {!accountName && (
+                  <p className="account-auth-lead">
+                    Accede a tus pedidos y guarda tus datos para comprar más rápido.
+                  </p>
+                )}
                 {accountName ? (
                   <div className="account-content">
                     <p className="modal-lead">
@@ -1133,7 +1145,7 @@ function App() {
                   </div>
                 ) : (
                   <form
-                    className="claim-form"
+                    className={accountMode === 'login' ? 'account-auth-form' : 'claim-form'}
                     onSubmit={(event) => {
                       event.preventDefault();
                       submitAccount(event.currentTarget).catch(() =>
