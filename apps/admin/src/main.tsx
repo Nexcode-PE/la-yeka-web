@@ -601,18 +601,18 @@ function Admin() {
   );
   if (!token)
     return (
-      <main className="login-shell relative grid min-h-screen place-items-center overflow-hidden px-5 py-7 text-slate-950 sm:p-8">
+      <main className="login-shell relative grid min-h-[100dvh] place-items-center overflow-hidden px-4 py-4 text-slate-950 sm:px-6 sm:py-8">
         <div className="login-orb login-orb-one" />
         <div className="login-orb login-orb-two" />
-        <section className="login-card relative grid w-full max-w-5xl overflow-hidden rounded-[28px] sm:grid-cols-[0.92fr_1.08fr]">
-          <aside className="login-brand relative hidden min-h-[600px] flex-col justify-between overflow-hidden p-10 text-white sm:flex">
+        <section className="login-card relative grid w-full overflow-hidden rounded-[24px] sm:grid-cols-[0.95fr_1.05fr]">
+          <aside className="login-brand relative hidden flex-col justify-between overflow-hidden text-white sm:flex">
             <div className="relative z-10 flex items-center gap-3">
               <div className="grid h-12 w-14 place-items-center overflow-hidden rounded-xl border border-amber-300/30 bg-black/25 px-1 backdrop-blur">
                 <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
               </div>
               <span className="text-xs font-bold tracking-[0.2em] text-amber-100">LA YEKA · ADMIN</span>
             </div>
-            <div className="relative z-10">
+            <div className="login-brand-copy relative z-10">
               <div className="mb-6 h-px w-12 bg-amber-400" />
               <h1 className="max-w-sm text-4xl font-black leading-[1.08] tracking-tight">
                 Todo tu negocio, en un solo lugar.
@@ -623,7 +623,7 @@ function Admin() {
             </div>
             <p className="relative z-10 text-xs font-medium text-slate-400">Operaciones La Yeka</p>
           </aside>
-          <div className="login-form-panel flex min-h-[580px] flex-col px-6 py-7 sm:px-12 sm:py-10">
+          <div className="login-form-panel flex flex-col">
             <div className="flex items-center justify-between sm:hidden">
               <div className="login-form-logo">
                 <img src="/images/logo-login-la-yeka.png" alt="La Yeka" />
@@ -635,14 +635,14 @@ function Admin() {
                 <img src="/images/logo-login-la-yeka.png" alt="La Yeka" />
               </div>
             </div>
-            <div className="my-auto max-w-sm pt-10 sm:pt-0">
+            <div className="login-form-content">
               <div className="mb-5 flex items-center gap-2 text-[11px] font-extrabold tracking-[0.16em] text-[#b86d00]">
                 <span className="grid size-7 place-items-center rounded-lg bg-[#fff2cf]"><ShieldCheck size={16} /></span>
                 ACCESO SEGURO
               </div>
               <h2 className="text-3xl font-black tracking-tight text-slate-950">Bienvenido de vuelta</h2>
               <p className="mt-3 text-sm leading-6 text-slate-500">Ingresa tus credenciales para continuar al panel de operación.</p>
-              <form className="mt-8 grid gap-5" onSubmit={login}>
+              <form className="login-form mt-7 grid gap-4" onSubmit={login}>
                 <label className="grid gap-2 text-sm font-bold text-slate-700">
                   Correo administrativo
                   <span className="login-input-wrap">
@@ -691,7 +691,7 @@ function Admin() {
                 </button>
               </form>
             </div>
-            <p className="pt-8 text-center text-xs text-slate-400 sm:text-left">Área exclusiva para el equipo autorizado de La Yeka.</p>
+            <p className="login-footer">Área exclusiva para el equipo autorizado de La Yeka.</p>
           </div>
         </section>
       </main>

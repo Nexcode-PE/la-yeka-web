@@ -64,6 +64,8 @@
     background: rgba(247, 173, 34, 0.14);
   }
   .login-card {
+    max-width: 1000px;
+    min-height: 590px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: white;
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.38), 0 2px 0 rgba(255, 255, 255, 0.07) inset;
@@ -73,6 +75,8 @@
       linear-gradient(160deg, rgba(17, 13, 4, 0.25), rgba(4, 4, 4, 0.97)),
       radial-gradient(circle at 78% 18%, rgba(247, 173, 34, 0.28), transparent 36%),
       #080808;
+    min-height: 590px;
+    padding: clamp(28px, 4vw, 42px);
   }
   .login-brand::after {
     position: absolute;
@@ -86,6 +90,27 @@
   }
   .login-form-panel {
     background: linear-gradient(145deg, #ffffff, #f9fbff);
+    min-height: 590px;
+    padding: clamp(30px, 5vw, 52px);
+  }
+  .login-form-content {
+    width: 100%;
+    max-width: 390px;
+    margin: auto 0;
+  }
+  .login-brand-copy h1 {
+    max-width: 370px;
+    font-size: clamp(34px, 3.55vw, 47px);
+    line-height: 1.07;
+  }
+  .login-brand-copy p {
+    max-width: 350px;
+  }
+  .login-footer {
+    margin-top: 30px;
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.5;
   }
   .login-form-logo {
     display: grid;
@@ -169,6 +194,55 @@
   }
   .login-submit:disabled {
     opacity: 0.72;
+  }
+  @media (max-width: 639px) {
+    .login-shell {
+      align-items: start;
+      overflow-y: auto;
+    }
+    .login-card {
+      min-height: 0;
+      max-width: 460px;
+      border-color: rgba(247, 173, 34, 0.35);
+      border-radius: 20px;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+    }
+    .login-form-panel {
+      min-height: 0;
+      padding: 24px 22px 26px;
+    }
+    .login-form-content {
+      max-width: none;
+      margin: 30px 0 0;
+    }
+    .login-form-logo {
+      width: 100px;
+      height: 68px;
+    }
+    .login-form-logo img {
+      max-width: 92px;
+      max-height: 62px;
+    }
+    .login-footer {
+      margin-top: 24px;
+      text-align: center;
+    }
+  }
+  @media (min-width: 640px) and (max-height: 700px) {
+    .login-card,
+    .login-brand,
+    .login-form-panel {
+      min-height: 540px;
+    }
+    .login-brand {
+      padding: 28px 34px;
+    }
+    .login-form-panel {
+      padding: 28px 42px;
+    }
+    .login-form-content {
+      margin: 18px 0 auto;
+    }
   }
   .order-board {
     display: grid;
