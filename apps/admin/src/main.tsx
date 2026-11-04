@@ -4,6 +4,7 @@ import {
   ClipboardList,
   Download,
   DollarSign,
+  MoreHorizontal,
   Menu,
   Bell,
   CheckCircle2,
@@ -780,14 +781,7 @@ function Admin() {
         <div className="relative flex h-[68px] w-full items-center justify-between gap-3 px-4 sm:px-6">
           <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-amber-400/70 via-amber-200/20 to-transparent" />
           <div className="flex items-center gap-3 sm:gap-4">
-            <button
-              aria-label="Abrir navegación"
-              onClick={() => setSidebarOpen(true)}
-              className="grid size-10 place-items-center rounded-lg text-slate-300 hover:bg-white/10 xl:hidden"
-            >
-              <Menu size={21} />
-            </button>
-            <div className="hidden h-11 w-14 items-center justify-center overflow-hidden rounded-xl border border-amber-400/30 bg-[#1d1d1d] px-1 shadow-inner shadow-black/40 sm:flex">
+            <div className="flex h-10 w-12 items-center justify-center overflow-hidden rounded-xl border border-amber-400/30 bg-[#1d1d1d] px-1 shadow-inner shadow-black/40 sm:h-11 sm:w-14">
               <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
             </div>
             <div>
@@ -2094,28 +2088,37 @@ function Admin() {
       </section>
       <nav
         aria-label="Navegación principal móvil"
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-slate-200 bg-white px-1 pb-[env(safe-area-inset-bottom)] pt-1 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-1 border-t border-slate-200 bg-white px-2 pb-[max(env(safe-area-inset-bottom),0.35rem)] pt-1.5 shadow-[0_-8px_20px_rgba(15,23,42,0.06)] xl:hidden"
       >
-        {(
-          [
-            { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
-            { id: 'products', label: 'Catálogo', icon: Package },
-            { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
-            { id: 'claims', label: 'Reclamos', icon: ClipboardList },
-            { id: 'settings', label: 'Config.', icon: Settings2 },
-            { id: 'team', label: 'Equipo', icon: UsersRound },
-            { id: 'audit', label: 'Actividad', icon: ScrollText },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setView(id)}
-            className={`grid min-h-14 place-items-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold ${view === id ? 'text-[#4169ff]' : 'text-slate-500'}`}
-          >
-            <Icon size={19} />
-            {label}
-          </button>
-        ))}
+        <div className="grid min-w-0 flex-1 grid-cols-4">
+          {(
+            [
+              { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
+              { id: 'products', label: 'Catálogo', icon: Package },
+              { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+              { id: 'claims', label: 'Reclamos', icon: ClipboardList },
+            ] as const
+          ).map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setView(id)}
+              className={`grid min-h-14 place-items-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold ${view === id ? 'bg-[#eef2ff] text-[#4169ff]' : 'text-slate-500'}`}
+            >
+              <Icon size={19} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="h-9 w-px bg-slate-200" aria-hidden="true" />
+        <button
+          type="button"
+          aria-label="Ver más opciones"
+          aria-expanded={sidebarOpen}
+          onClick={() => setSidebarOpen(true)}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-slate-950 text-white shadow-lg shadow-slate-950/20 transition hover:scale-105 hover:bg-[#4169ff] active:scale-95"
+        >
+          <MoreHorizontal size={21} />
+        </button>
       </nav>
     </main>
   );
