@@ -1,4 +1,4 @@
-import { ChevronRight, PackageCheck, ShoppingBag, TrendingUp } from 'lucide-react';
+import { ChevronRight, CircleDollarSign, PackageCheck, ShoppingBag, TrendingUp } from 'lucide-react';
 import { labels } from '../lib/admin-config';
 import type { Dashboard } from '../types/admin';
 import { DashboardSkeleton, Empty, Stat } from '../components/ui';
@@ -8,12 +8,13 @@ type Props = {
   dashboard: Dashboard | null;
   loading: boolean;
   onOrders: () => void;
+  onPaymentReview: () => void;
   range: Range;
   onRange: (range: Range) => void;
 };
 const rangeLabels: Record<Range, string> = { today: 'Hoy', week: 'Esta semana', month: 'Este mes' };
 
-export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: Props) {
+export function DashboardPage({ dashboard, loading, onOrders, onPaymentReview, range, onRange }: Props) {
   if (loading && !dashboard) return <DashboardSkeleton />;
   if (!dashboard) return null;
   return (
@@ -51,6 +52,29 @@ export function DashboardPage({ dashboard, loading, onOrders, range, onRange }: 
         <Stat value={`S/ ${dashboard.pendingPaymentAmount.toFixed(2)}`} label={`Por cobrar · ${dashboard.pendingPaymentOrders}`} tone="gray" />
         <Stat value={dashboard.pending} label="Por atender ahora" tone="amber" />
       </div>
+      {dashboard.pendingPaymentOrders > 0 && (
+        <button
+          onClick={onPaymentReview}
+          className="mt-4 flex w-full items-center justify-between gap-4 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-left transition hover:border-amber-300 hover:shadow-sm"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-amber-400 text-slate-950">
+              <CircleDollarSign size={19} />
+            </span>
+            <span>
+              <span className="block text-sm font-black text-slate-900">
+                Hay {dashboard.pendingPaymentOrders} pago{dashboard.pendingPaymentOrders === 1 ? '' : 's'} pendiente{dashboard.pendingPaymentOrders === 1 ? '' : 's'} de revisión
+              </span>
+              <span className="block text-xs text-slate-600">
+                S/ {dashboard.pendingPaymentAmount.toFixed(2)} por confirmar o cobrar.
+              </span>
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1 text-sm font-bold text-amber-800">
+            Revisar <ChevronRight size={17} />
+          </span>
+        </button>
+      )}
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.35fr_0.9fr]">
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-200/30">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">

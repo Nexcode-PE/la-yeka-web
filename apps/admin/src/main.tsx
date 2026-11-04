@@ -995,6 +995,12 @@ function Admin() {
             dashboard={dashboard}
             loading={loading}
             onOrders={() => setView('orders')}
+            onPaymentReview={() => {
+              setOrderPaymentFilter('PENDING');
+              setOrderStatusFilter('');
+              setOrderPage(1);
+              setView('orders');
+            }}
             range={reportRange}
             onRange={setReportRange}
           />
