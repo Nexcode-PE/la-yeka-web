@@ -31,6 +31,7 @@ export type Order = {
   paymentProofUrl: string | null;
   address: string | null;
   district: string | null;
+  notes: string | null;
   deliveryFee: string;
   deliveryQuotedAt: string | null;
   deliveryDriver: string | null;

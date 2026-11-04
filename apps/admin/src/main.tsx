@@ -19,6 +19,7 @@ import {
   Mail,
   Package,
   Plus,
+  Printer,
   Pencil,
   RefreshCw,
   Search,
@@ -54,6 +55,14 @@ import { useAdminRequest } from './hooks/use-admin-request';
 import { DashboardPage } from './pages/DashboardPage';
 import { CashPage } from './pages/OperationsPages';
 import { CategoryManagerDialog } from './components/CategoryManagerDialog';
+
+const escapePrint = (value: unknown) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 
 function Admin() {
   const [token, setToken] = useState(() => sessionStorage.getItem('la-yeka-admin-token') || '');
@@ -326,6 +335,28 @@ function Admin() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'No se pudo exportar los pedidos.');
     }
+  };
+  const printOrder = (order: Order) => {
+    const receipt = window.open('', `yeka-order-${order.orderNumber}`, 'width=420,height=680');
+    if (!receipt) {
+      setError('El navegador bloqueó la ventana de impresión. Permite ventanas emergentes e inténtalo otra vez.');
+      return;
+    }
+    const code = `YEKA-${String(order.orderNumber).padStart(6, '0')}`;
+    const items = order.items
+      .map((item) => `<li><b>${item.quantity}×</b> ${escapePrint(item.productName)}</li>`)
+      .join('');
+    receipt.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${code}</title><style>
+      @page{size:80mm auto;margin:7mm}*{box-sizing:border-box}body{margin:0;color:#111;font-family:Arial,sans-serif;font-size:12px}header{border-bottom:2px solid #f7ad22;padding-bottom:10px;text-align:center}h1{margin:0;font-size:22px}h2{margin:8px 0 2px;font-size:15px}.muted{color:#555;font-size:11px}.code{font-family:monospace;font-weight:700}section{padding:11px 0;border-bottom:1px dashed #aaa}p{margin:4px 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px}.label{color:#666;font-size:10px;text-transform:uppercase}ul{list-style:none;margin:8px 0 0;padding:0}li{display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #eee}.note{background:#fff5dc;padding:8px}.total{display:flex;justify-content:space-between;font-size:17px;font-weight:800;padding-top:12px}footer{padding-top:12px;text-align:center;color:#555;font-size:10px}</style></head><body>
+      <header><h1>LA YEKA</h1><p class="muted">Comanda de pedido</p><p class="code">${code}</p></header>
+      <section class="meta"><div><p class="label">Cliente</p><p>${escapePrint(order.customerName || 'Cliente sin nombre')}</p></div><div><p class="label">Celular</p><p>${escapePrint(order.customerPhone || '—')}</p></div><div><p class="label">Fecha</p><p>${escapePrint(new Date(order.createdAt).toLocaleString('es-PE'))}</p></div><div><p class="label">Modalidad</p><p>${escapePrint(labels[order.fulfillment])}</p></div></section>
+      ${order.fulfillment === 'DELIVERY' ? `<section><p class="label">Dirección de entrega</p><p>${escapePrint([order.address, order.district].filter(Boolean).join(' · ') || 'Por confirmar')}</p></section>` : ''}
+      <section><p class="label">Productos</p><ul>${items}</ul></section>
+      ${order.notes ? `<section><p class="label">Indicaciones</p><p class="note">${escapePrint(order.notes)}</p></section>` : ''}
+      <div class="total"><span>Total</span><span>S/ ${(Number(order.total) + Number(order.deliveryFee || 0)).toFixed(2)}</span></div>
+      <footer>Pago: ${escapePrint(labels[order.paymentMethod])} · ${escapePrint(labels[order.paymentStatus])}<br>Gracias por elegir La Yeka.</footer>
+      <script>window.onload=()=>{window.focus();window.print()}<\/script></body></html>`);
+    receipt.document.close();
   };
   const openCashShift = async (openingAmount: number, notes: string) => {
     setSavingId('cash');
@@ -1355,6 +1386,12 @@ function Admin() {
                               className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"
                             >
                               <ExternalLink size={15} /> WhatsApp
+                            </button>
+                            <button
+                              onClick={() => printOrder(order)}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:border-amber-300 hover:bg-amber-50"
+                            >
+                              <Printer size={15} /> Comanda / PDF
                             </button>
                             {!['DELIVERED', 'CANCELLED'].includes(order.status) && (
                               <button
