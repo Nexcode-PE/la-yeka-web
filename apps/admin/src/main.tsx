@@ -103,6 +103,7 @@ function Admin() {
   const [orderPaymentFilter, setOrderPaymentFilter] = useState('');
   const [orderFulfillmentFilter, setOrderFulfillmentFilter] = useState('');
   const [orderPage, setOrderPage] = useState(1);
+  const [mobileOrderColumn, setMobileOrderColumn] = useState('Nuevos');
   const [orderTable, setOrderTable] = useState<Omit<OrderTable, 'data'>>({
     total: 0,
     page: 1,
@@ -1217,6 +1218,21 @@ function Admin() {
                 <button disabled={orderTable.page >= orderTable.totalPages} onClick={() => setOrderPage((page) => Math.min(orderTable.totalPages, page + 1))} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-semibold disabled:cursor-not-allowed disabled:opacity-40">Siguiente</button>
               </div>
             </div>
+            <div className="order-mobile-tabs" role="tablist" aria-label="Etapas de los pedidos">
+              {operationColumns.map((column) => (
+                <button
+                  key={column.title}
+                  type="button"
+                  role="tab"
+                  aria-selected={mobileOrderColumn === column.title}
+                  className={mobileOrderColumn === column.title ? 'is-active' : ''}
+                  onClick={() => setMobileOrderColumn(column.title)}
+                >
+                  <span>{column.title}</span>
+                  <b>{column.orders.length}</b>
+                </button>
+              ))}
+            </div>
           <div className="order-board">
             {loading ? (
               <div className="xl:col-span-4">
@@ -1228,7 +1244,12 @@ function Admin() {
               </div>
             ) : (
               operationColumns.map((column) => (
-                <section key={column.title} className={`order-column border-t-4 ${column.tone}`}>
+                <section
+                  key={column.title}
+                  className={`order-column border-t-4 ${column.tone} ${
+                    mobileOrderColumn === column.title ? 'is-mobile-active' : ''
+                  }`}
+                >
                   <div className="order-column-header">
                     <div>
                       <p className="order-column-label">OPERACIÓN</p>
