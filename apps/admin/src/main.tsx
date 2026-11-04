@@ -625,11 +625,15 @@ function Admin() {
           </aside>
           <div className="login-form-panel flex min-h-[580px] flex-col px-6 py-7 sm:px-12 sm:py-10">
             <div className="flex items-center justify-between sm:hidden">
-              <img src={brandLogo} alt="La Yeka" className="h-14 w-auto object-contain" />
+              <div className="login-form-logo">
+                <img src={brandLogo} alt="La Yeka" />
+              </div>
               <span className="rounded-full bg-[#fff4d6] px-3 py-1.5 text-[10px] font-extrabold tracking-[0.14em] text-[#9a6800]">ADMIN</span>
             </div>
             <div className="hidden sm:block">
-              <img src={brandLogo} alt="La Yeka" className="h-16 w-auto object-contain" />
+              <div className="login-form-logo">
+                <img src={brandLogo} alt="La Yeka" />
+              </div>
             </div>
             <div className="my-auto max-w-sm pt-10 sm:pt-0">
               <div className="mb-5 flex items-center gap-2 text-[11px] font-extrabold tracking-[0.16em] text-[#b86d00]">

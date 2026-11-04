@@ -87,6 +87,22 @@
   .login-form-panel {
     background: linear-gradient(145deg, #ffffff, #f9fbff);
   }
+  .login-form-logo {
+    display: grid;
+    width: 88px;
+    height: 68px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(247, 173, 34, 0.55);
+    border-radius: 14px;
+    background: linear-gradient(145deg, #17130b, #050505);
+    box-shadow: 0 10px 22px rgba(19, 14, 4, 0.13);
+  }
+  .login-form-logo img {
+    max-width: 76px;
+    max-height: 58px;
+    object-fit: contain;
+  }
   .login-input-wrap {
     position: relative;
     display: flex;
