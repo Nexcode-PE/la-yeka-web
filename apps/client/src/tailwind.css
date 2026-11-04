@@ -106,12 +106,13 @@
   .drawer { @apply fixed inset-0 z-50; }
   .overlay, .modal-backdrop { @apply absolute inset-0 bg-black/55; }
   .panel { @apply absolute top-0 right-0 h-full w-full overflow-y-auto bg-white p-[22px_18px] pb-[max(22px,env(safe-area-inset-bottom))] shadow-2xl sm:w-[440px] sm:p-8; }
-  .drawer-top { @apply mb-7 flex items-start justify-between; }
-  .close { @apply grid size-10 place-items-center border-0 bg-transparent text-yeka-ink; }
+  .drawer-top { @apply mb-5 flex items-start justify-between border-b border-stone-100 pb-4; }
+  .close { @apply grid size-10 place-items-center rounded-full border border-stone-200 bg-white text-yeka-ink shadow-sm transition hover:border-yeka-gold hover:bg-amber-50; }
   .empty { @apply grid place-items-center gap-3 py-20 text-center text-stone-500; }
   .empty h3 { @apply mb-0 text-xl font-extrabold text-yeka-ink; }
   .empty p { @apply mb-2 text-sm; }
   .cart-items { @apply grid divide-y divide-stone-200; }
+  .cart-order-card { @apply overflow-hidden rounded-xl border border-stone-200 bg-white px-3 shadow-sm; }
   .cart-extras { @apply mt-5 border-y border-stone-200 py-5; }
   .cart-extras .eyebrow { @apply mb-2 text-[9px]; }
   .cart-extras h3 { @apply mb-1 text-sm font-extrabold; }
@@ -119,7 +120,7 @@
   .cart-extra-list { @apply grid grid-cols-2 gap-2; }
   .cart-extra-list button { @apply grid min-h-11 grid-cols-[1fr_auto_auto] items-center gap-1 rounded border border-stone-200 bg-stone-50 px-2.5 text-left text-[11px] font-bold transition hover:border-yeka-gold hover:bg-[#fff7e8]; }
   .cart-extra-list b { @apply font-mono text-[10px] text-yeka-gold-dark; }
-  .cart-item { @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 py-4; }
+  .cart-item { @apply grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 py-3; }
   .cart-item h3 { @apply mb-1 text-sm font-extrabold; }
   .cart-item p { @apply mb-0 text-xs text-stone-500; }
   .cart-item > strong { @apply font-mono text-sm; }
@@ -139,10 +140,24 @@
   .qty { @apply flex items-center gap-2; }
   .qty button { @apply grid size-7 place-items-center rounded-full border border-stone-200 bg-white; }
   .qty b { @apply text-xs; }
+  .checkout-profile { @apply mt-4 rounded-xl border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700; }
+  .checkout-profile b { @apply text-[13px] font-extrabold text-yeka-ink; }
+  .checkout-profile span { @apply mt-1 block text-xs leading-5 text-stone-500; }
+  .checkout-methods { @apply mt-3 grid grid-cols-2 gap-2; }
+  .checkout-methods select { @apply h-11 min-w-0 rounded-lg border border-stone-200 bg-white px-3 text-sm font-semibold text-yeka-ink outline-none transition focus:border-yeka-gold focus:ring-2 focus:ring-yeka-gold/15; }
+  .checkout-payment { @apply mt-3 grid gap-2; }
+  .checkout-payment > input { @apply h-11 w-full rounded-lg border border-stone-200 bg-white px-3 text-sm outline-none transition focus:border-yeka-gold focus:ring-2 focus:ring-yeka-gold/15; }
+  .checkout-voucher { @apply grid gap-1.5 rounded-lg border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-extrabold text-yeka-ink; }
+  .checkout-voucher input { @apply block w-full min-w-0 text-xs font-normal text-stone-600; }
+  .checkout-voucher span:last-child { @apply text-[11px] font-normal leading-4 text-stone-500; }
+  .checkout-delivery-note { @apply mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900; }
   .panel textarea { @apply mt-2 min-h-24 w-full resize-y border border-stone-200 bg-white p-3 text-sm outline-none focus:border-yeka-gold; }
   .total { @apply my-5 flex items-center justify-between text-sm; }
+  .checkout-total { @apply rounded-xl bg-yeka-ink px-4 py-3 text-white; }
+  .checkout-total span { @apply text-xs font-semibold text-stone-300; }
+  .checkout-total strong { @apply text-yeka-gold; }
   .total strong { @apply font-mono text-xl; }
-  .checkout { @apply w-full justify-center border-0; }
+  .checkout { @apply w-full justify-center rounded-xl border-0 py-4 shadow-[0_8px_18px_rgba(247,173,34,0.25)]; }
   .checkout:disabled { @apply cursor-not-allowed opacity-50 hover:translate-y-0; }
   .google-login { @apply flex items-center justify-center gap-3 rounded border border-stone-300 bg-white px-4 py-3 text-sm font-extrabold text-yeka-ink transition hover:border-yeka-gold hover:bg-[#fffaf0]; }
   .google-login span { @apply grid size-6 place-items-center rounded-full bg-white text-base font-black text-[#4285f4] shadow-sm; }

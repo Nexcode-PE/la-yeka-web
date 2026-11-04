@@ -745,7 +745,7 @@ function App() {
               </div>
             ) : (
               <>
-                <div className="cart-items">
+                <div className="cart-items cart-order-card">
                   {cart.map((x) => (
                     <div
                       className={`cart-item ${deletingItem === x.name ? 'cart-item-removing' : ''}`}
@@ -784,7 +784,7 @@ function App() {
                   ))}
                 </div>
                 <ExtrasPicker extras={extras} onAdd={add} />
-                <div className="mt-4 border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+                <div className="checkout-profile">
                   {!authToken ? (
                     <>
                       <b className="block text-yeka-ink">Inicia sesión para continuar</b>
@@ -818,7 +818,7 @@ function App() {
                         : 'Completar mi perfil'}
                   </button>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="checkout-methods">
                   <select
                     className="border border-stone-200 bg-white p-3 text-sm"
                     value={fulfillment}
@@ -841,7 +841,7 @@ function App() {
                   </select>
                 </div>
                 {paymentMethod === 'YAPE' && fulfillment === 'PICKUP' && (
-                  <div className="mt-2 grid gap-2">
+                  <div className="checkout-payment">
                     <input
                       className="w-full border border-stone-200 bg-white p-3 text-sm"
                       value={paymentReference}
@@ -849,8 +849,8 @@ function App() {
                       placeholder="Código de operación Yape"
                       aria-label="Código de operación Yape"
                     />
-                    <label className="block border border-dashed border-stone-300 bg-stone-50 p-3 text-sm font-semibold text-stone-700">
-                      Voucher Yape
+                    <label className="checkout-voucher">
+                      <span>Voucher Yape</span>
                       <input
                         className="mt-2 block w-full text-xs font-normal"
                         type="file"
@@ -866,7 +866,7 @@ function App() {
                   </div>
                 )}
                 {fulfillment === 'DELIVERY' && (
-                  <p className="mt-2 border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                  <p className="checkout-delivery-note">
                     El delivery se cotiza según tu dirección. Envía tu pedido con el subtotal y te confirmaremos el monto final antes de coordinar el pago.
                   </p>
                 )}
@@ -875,7 +875,7 @@ function App() {
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="¿Alguna indicación para tu pedido?"
                 />
-                <div className="total">
+                <div className="total checkout-total">
                   <span>{fulfillment === 'DELIVERY' ? 'Subtotal de productos' : 'Total'}</span>
                   <strong>{money(total)}</strong>
                 </div>
