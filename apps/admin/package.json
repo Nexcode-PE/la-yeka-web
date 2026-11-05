@@ -1,1 +1,24 @@
-{"name":"@la-yeka/admin","private":true,"type":"module","scripts":{"dev":"vite","typecheck":"tsc --noEmit --project tsconfig.json","build":"tsc -b && vite build"},"dependencies":{"lucide-react":"^1.61.0","react":"^19.2.0","react-dom":"^19.2.0"},"devDependencies":{"@tailwindcss/vite":"^4.3.3","@types/react":"^19.2.0","@types/react-dom":"^19.2.0","@vitejs/plugin-react":"^5.1.0","tailwindcss":"^4.3.3","typescript":"^7.0.2","vite":"^8.3.5"}}
+{
+  "name": "@la-yeka/admin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node init && vite",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "build": "node init && tsc -b && vite build"
+  },
+  "dependencies": {
+    "lucide-react": "^1.61.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}

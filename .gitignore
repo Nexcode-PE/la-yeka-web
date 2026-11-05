@@ -1,7 +1,5 @@
 node_modules/
 dist/
-.env
-.env.local
 *.tsbuildinfo
 *.log
 src/generated/
@@ -9,4 +7,5 @@ packages/database/src/generated/
 
 
 .vercel
-.env*
+.playwright-mcp/
+config.bat
