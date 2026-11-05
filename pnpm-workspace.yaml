@@ -7,3 +7,6 @@ allowBuilds:
   argon2: true
   esbuild: true
   prisma: true
+
+overrides:
+  zod: 4.6.7

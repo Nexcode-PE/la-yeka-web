@@ -13,6 +13,7 @@ import {
   requireUser,
   verifyGoogleState,
 } from './auth.js';
+import { canTransitionOrder, orderStatuses } from './domain/order-state.js';
 
 const app = new Hono().basePath('/api');
 const writeAudit = async (
@@ -45,6 +46,8 @@ const googleConfigured = () =>
   );
 type RateBucket = { count: number; resetAt: number };
 const rateBuckets = new Map<string, RateBucket>();
+const MAX_JSON_BODY_BYTES = 256 * 1024;
+const MAX_UPLOAD_BODY_BYTES = 4 * 1024 * 1024;
 const enforceRateLimit = (
   c: { req: { header: (name: string) => string | undefined } },
   scope: string,
@@ -75,6 +78,14 @@ app.use(
     allowHeaders: ['Content-Type', 'Authorization'],
   }),
 );
+app.use('*', async (c, next) => {
+  const contentLength = Number(c.req.header('content-length') || 0);
+  const uploadRequest = c.req.path.endsWith('/payment-proof') || c.req.path.endsWith('/uploads');
+  const limit = uploadRequest ? MAX_UPLOAD_BODY_BYTES : MAX_JSON_BODY_BYTES;
+  if (Number.isFinite(contentLength) && contentLength > limit)
+    return c.json({ error: 'La solicitud supera el tamaño permitido.' }, 413);
+  await next();
+});
 app.use('*', async (c, next) => {
   await next();
   c.header('X-Content-Type-Options', 'nosniff');
@@ -848,11 +859,17 @@ app.post('/admin/cash-shifts', async (c) => {
   if (!parsed.success) return c.json({ error: 'Monto de apertura inválido.' }, 400);
   if (await db.cashShift.findFirst({ where: { closedAt: null } }))
     return c.json({ error: 'Ya hay una caja abierta. Ciérrala antes de iniciar otro turno.' }, 409);
-  const shift = await db.cashShift.create({
-    data: { openedById: admin.id, openingAmount: parsed.data.openingAmount, notes: parsed.data.notes },
-  });
-  await writeAudit(admin, 'CREATE', 'CASH_SHIFT', shift.id, 'Abrió turno de caja');
-  return c.json(shift, 201);
+  try {
+    const shift = await db.cashShift.create({
+      data: { openedById: admin.id, openingAmount: parsed.data.openingAmount, notes: parsed.data.notes },
+    });
+    await writeAudit(admin, 'CREATE', 'CASH_SHIFT', shift.id, 'Abrió turno de caja');
+    return c.json(shift, 201);
+  } catch (cause) {
+    if (typeof cause === 'object' && cause && 'code' in cause && cause.code === 'P2002')
+      return c.json({ error: 'Ya hay una caja abierta. Actualiza los datos antes de iniciar otro turno.' }, 409);
+    throw cause;
+  }
 });
 app.patch('/admin/cash-shifts/:id/close', async (c) => {
   const admin = await requireAdmin(c.req.header('authorization'));
@@ -878,7 +895,7 @@ app.get('/admin/claims', async (c) => {
   return c.json(await db.claim.findMany({ orderBy: { createdAt: 'desc' }, take: 100 }));
 });
 const orderStatus = z.object({
-  status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']),
+  status: z.enum(orderStatuses),
   reason: z.string().trim().max(300).optional(),
 });
 app.patch('/admin/orders/:id', async (c) => {
@@ -894,11 +911,18 @@ app.patch('/admin/orders/:id', async (c) => {
   try {
     const current = await db.order.findUniqueOrThrow({ where: { id: c.req.param('id') } });
     if (current.status === parsed.data.status) return c.json(current);
+    if (!canTransitionOrder(current.status, parsed.data.status))
+      return c.json(
+        { error: `No se permite cambiar un pedido de ${current.status} a ${parsed.data.status}.` },
+        409,
+      );
     const order = await db.$transaction(async (tx) => {
-      const updated = await tx.order.update({
-        where: { id: current.id },
+      const changed = await tx.order.updateMany({
+        where: { id: current.id, status: current.status },
         data: { status: parsed.data.status },
       });
+      if (changed.count !== 1) throw new Error('ORDER_STATE_CONFLICT');
+      const updated = await tx.order.findUniqueOrThrow({ where: { id: current.id } });
       await tx.orderStatusEvent.create({
         data: {
           orderId: current.id,
@@ -918,7 +942,9 @@ app.patch('/admin/orders/:id', async (c) => {
       `Pedido #${order.orderNumber}: ${current.status} → ${order.status}`,
     );
     return c.json(order);
-  } catch {
+  } catch (cause) {
+    if (cause instanceof Error && cause.message === 'ORDER_STATE_CONFLICT')
+      return c.json({ error: 'El pedido cambió mientras lo actualizabas. Actualiza e inténtalo otra vez.' }, 409);
     return c.json({ error: 'Pedido no encontrado.' }, 404);
   }
 });
