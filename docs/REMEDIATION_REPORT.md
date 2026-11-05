@@ -20,7 +20,7 @@ No database migration was applied and no deployment was made as part of this rem
 | Dashboard aggregation | Pending | Current dashboard aggregates period orders in application memory. |
 | Admin refresh polling | Pending | Current 10-second polling is functional but should be replaced by cursor polling or an event service at scale. |
 | Order state machine | Implemented | API now accepts only the sequential lifecycle or cancellation, with optimistic concurrent update protection. |
-| Double cash opening | Pending migration | Additive PostgreSQL partial unique index was created in a migration but intentionally not applied. API handles unique-conflict responses. |
+| Double cash opening | Resolved | Additive PostgreSQL partial unique index was applied through migration `20261104010000_operations_integrity`; API handles unique-conflict responses. |
 | Claims/audit pagination | Pending | Current endpoints retain fixed limits. |
 | Deprecated business values | Pending decision | Delivery fields and legacy payment enum values require historical-data review before removal. |
 | Package manager / versions | In progress | pnpm is formalized, versions are pinned and a redundant npm lockfile is pending removal after final CI verification. |
@@ -36,11 +36,10 @@ No database migration was applied and no deployment was made as part of this rem
 
 ## Deployment plan
 
-1. Review and apply the additive migration using `pnpm db:migrate:deploy` in a maintenance window.
-2. Verify exactly one active cash shift can be opened.
-3. Configure a shared rate-limit provider and private voucher storage before enabling those remediation items.
-4. Run CI on a pull request, then deploy a preview first.
-5. Verify login, order creation, payment voucher upload, cash opening and dashboard values after deployment.
+1. Verify exactly one active cash shift can be opened through a controlled operational test.
+2. Configure a shared rate-limit provider and private voucher storage before enabling those remediation items.
+3. Run CI on a pull request, then deploy a preview first.
+4. Verify login, order creation, payment voucher upload, cash opening and dashboard values after deployment.
 
 ## Residual risks
 
