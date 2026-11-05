@@ -338,6 +338,32 @@ function Admin() {
       setError(cause instanceof Error ? cause.message : 'No se pudo exportar los pedidos.');
     }
   };
+  const openPaymentProof = async (order: Order) => {
+    // Abrimos la ventana durante el gesto del usuario para evitar que el navegador
+    // la bloquee; el archivo se carga con el token administrativo, no con una URL pública.
+    const preview = window.open('', `yeka-voucher-${order.orderNumber}`);
+    if (!preview) {
+      setError('El navegador bloqueó la vista del voucher. Permite ventanas emergentes e inténtalo otra vez.');
+      return;
+    }
+    preview.document.title = `Voucher YEKA-${String(order.orderNumber).padStart(6, '0')}`;
+    preview.document.body.innerHTML = '<p style="font-family:system-ui;padding:24px">Cargando voucher seguro…</p>';
+    try {
+      const response = await fetch(`${api}/api/admin/orders/${order.id}/payment-proof`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'No se pudo abrir el voucher.');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      preview.location.replace(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (cause) {
+      preview.close();
+      setError(cause instanceof Error ? cause.message : 'No se pudo abrir el voucher.');
+    }
+  };
   const exportDashboardReport = () => {
     if (!dashboard) return;
     const safeCell = (value: string | number) => {
@@ -1340,9 +1366,9 @@ function Admin() {
                               <div className="mb-2 flex items-center justify-between gap-2">
                                 <p>Control de pago</p>
                                 {order.paymentProofUrl && (
-                                  <a href={order.paymentProofUrl} target="_blank" rel="noreferrer">
+                                  <button type="button" onClick={() => void openPaymentProof(order)}>
                                     Ver voucher Yape
-                                  </a>
+                                  </button>
                                 )}
                               </div>
                               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_auto]">
@@ -2170,9 +2196,9 @@ function Admin() {
                     <Printer size={16} /> Comanda / PDF
                   </button>
                   {selectedOrder.paymentProofUrl && (
-                    <a href={selectedOrder.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#aebdff] bg-[#eef2ff] px-4 text-sm font-bold text-[#3156d8] hover:bg-[#dfe7ff]">
+                    <button type="button" onClick={() => void openPaymentProof(selectedOrder)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#aebdff] bg-[#eef2ff] px-4 text-sm font-bold text-[#3156d8] hover:bg-[#dfe7ff]">
                       <ExternalLink size={16} /> Ver voucher
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>

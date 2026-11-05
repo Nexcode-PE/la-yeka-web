@@ -5,14 +5,20 @@ const databaseUrl = process.env.DATABASE_URL || '';
 const isDedicatedTestDatabase = (() => {
   try {
     const url = new URL(databaseUrl);
-    return ['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname.includes('la_yeka_test');
+    return (
+      ['localhost', '127.0.0.1'].includes(url.hostname) && url.pathname.includes('la_yeka_test')
+    );
   } catch {
     return false;
   }
 })();
 
 if (!isDedicatedTestDatabase) {
-  test('API integration suite requires the dedicated la_yeka_test database', { skip: true }, () => {});
+  test(
+    'API integration suite requires the dedicated la_yeka_test database',
+    { skip: true },
+    () => {},
+  );
 } else {
   const [{ db }, { default: app }, { signSession }, argon2] = await Promise.all([
     import('../../../../packages/database/src/client.js'),
@@ -72,6 +78,11 @@ if (!isDedicatedTestDatabase) {
 
   test('rejects administrative access without a session', async () => {
     const response = await request('/admin/orders');
+    assert.equal(response.status, 401);
+  });
+
+  test('never serves a payment proof without an administrative session', async () => {
+    const response = await request('/admin/orders/not-a-real-order/payment-proof');
     assert.equal(response.status, 401);
   });
 

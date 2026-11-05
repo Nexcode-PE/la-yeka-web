@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { put } from '@vercel/blob';
+import { get, put } from '@vercel/blob';
 import { z } from 'zod';
 import argon2 from 'argon2';
 import { db } from '../../../packages/database/src/client.js';
@@ -1007,14 +1007,44 @@ app.post('/orders/:id/payment-proof', async (c) => {
   const extension =
     proof.type === 'image/png' ? 'png' : proof.type === 'image/webp' ? 'webp' : 'jpg';
   const blob = await put(`payment-proofs/YEKA-${order.orderNumber}.${extension}`, proof, {
-    access: 'public',
+    // Los comprobantes pueden incluir datos personales. Nunca deben quedar disponibles
+    // por una URL pública; el panel los consulta mediante la ruta protegida de abajo.
+    access: 'private',
     addRandomSuffix: true,
   });
   await db.order.update({
     where: { id: order.id },
     data: { paymentProofUrl: blob.url, paymentStatus: 'PENDING' },
   });
-  return c.json({ url: blob.url }, 201);
+  return c.json({ uploaded: true }, 201);
+});
+app.get('/admin/orders/:id/payment-proof', async (c) => {
+  if (!(await requireAdmin(c.req.header('authorization'))))
+    return c.json({ error: 'No autorizado' }, 401);
+  if (!process.env.BLOB_READ_WRITE_TOKEN && !process.env.VERCEL_OIDC_TOKEN)
+    return c.json({ error: 'El almacenamiento de comprobantes aún no está configurado.' }, 503);
+
+  const order = await db.order.findUnique({
+    where: { id: c.req.param('id') },
+    select: { paymentProofUrl: true, orderNumber: true },
+  });
+  if (!order?.paymentProofUrl) return c.json({ error: 'Este pedido no tiene voucher adjunto.' }, 404);
+
+  try {
+    const voucher = await get(order.paymentProofUrl, { access: 'private', useCache: false });
+    if (!voucher || voucher.statusCode !== 200 || !voucher.stream)
+      return c.json({ error: 'No se encontró el voucher.' }, 404);
+    return new Response(voucher.stream, {
+      headers: {
+        'Content-Type': voucher.blob.contentType,
+        'Content-Disposition': `inline; filename="voucher-yeka-${order.orderNumber}"`,
+        'Cache-Control': 'private, no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch {
+    return c.json({ error: 'No fue posible recuperar el voucher de forma segura.' }, 502);
+  }
 });
 const claimUpdate = z.object({
   status: z.enum(['RECEIVED', 'IN_REVIEW', 'RESOLVED']).optional(),
