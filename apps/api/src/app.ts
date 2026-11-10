@@ -389,16 +389,18 @@ app.get('/admin/dashboard', async (c) => {
   start.setHours(0, 0, 0, 0);
   if (range === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
   if (range === 'month') start.setDate(1);
-  const [periodOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all([
-    db.order.findMany({
-      where: { createdAt: { gte: start } },
-      include: { items: true },
-    }),
-    db.order.count({ where: { status: { in: ['PENDING', 'CONFIRMED', 'PREPARING'] } } }),
-    db.product.count(),
-    db.product.count({ where: { isAvailable: true } }),
-    db.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
-  ]);
+  const [periodOrders, pending, totalProducts, availableProducts, recentOrders] = await Promise.all(
+    [
+      db.order.findMany({
+        where: { createdAt: { gte: start } },
+        include: { items: true },
+      }),
+      db.order.count({ where: { status: { in: ['PENDING', 'CONFIRMED', 'PREPARING'] } } }),
+      db.product.count(),
+      db.product.count({ where: { isAvailable: true } }),
+      db.order.findMany({ include: { items: true }, orderBy: { createdAt: 'desc' }, take: 5 }),
+    ],
+  );
   const rangeOrders = periodOrders.filter((order) => order.status !== 'CANCELLED');
   const isPaid = (order: (typeof rangeOrders)[number]) =>
     (order.paymentMethod === 'YAPE' && order.paymentStatus === 'VERIFIED') ||
@@ -697,7 +699,9 @@ const orderTableFilters = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(5).max(50).default(12),
   query: z.string().trim().max(100).default(''),
-  status: z.enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED']).optional(),
+  status: z
+    .enum(['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED'])
+    .optional(),
   payment: z.enum(['PENDING', 'VERIFIED', 'REJECTED']).optional(),
   fulfillment: z.enum(['DELIVERY', 'PICKUP']).optional(),
 });
@@ -752,17 +756,42 @@ app.get('/admin/orders/table', async (c) => {
     }),
     db.order.count({ where }),
   ]);
-  return c.json({ data, total, page: parsed.data.page, pageSize: parsed.data.pageSize, totalPages: Math.max(1, Math.ceil(total / parsed.data.pageSize)) });
+  return c.json({
+    data,
+    total,
+    page: parsed.data.page,
+    pageSize: parsed.data.pageSize,
+    totalPages: Math.max(1, Math.ceil(total / parsed.data.pageSize)),
+  });
 });
 app.get('/admin/orders/export', async (c) => {
   if (!(await requireAdmin(c.req.header('authorization'))))
     return c.json({ error: 'No autorizado' }, 401);
   const parsed = orderTableFilters.safeParse({ ...c.req.query(), page: '1', pageSize: '50' });
   if (!parsed.success) return c.json({ error: 'Filtros inválidos.' }, 400);
-  const orders = await db.order.findMany({ where: orderWhere(parsed.data), include: { items: true }, orderBy: { createdAt: 'desc' }, take: 500 });
-  const csvCell = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""').replace(/^[=+\-@]/, "'$&")}"`;
+  const orders = await db.order.findMany({
+    where: orderWhere(parsed.data),
+    include: { items: true },
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+  });
+  const csvCell = (value: unknown) =>
+    `"${String(value ?? '')
+      .replaceAll('"', '""')
+      .replace(/^[=+\-@]/, "'$&")}"`;
   const lines = [
-    ['Pedido', 'Fecha', 'Cliente', 'Celular', 'Modalidad', 'Pago', 'Estado pago', 'Estado pedido', 'Total', 'Productos'],
+    [
+      'Pedido',
+      'Fecha',
+      'Cliente',
+      'Celular',
+      'Modalidad',
+      'Pago',
+      'Estado pago',
+      'Estado pedido',
+      'Total',
+      'Productos',
+    ],
     ...orders.map((order) => [
       `YEKA-${String(order.orderNumber).padStart(6, '0')}`,
       order.createdAt.toLocaleString('es-PE'),
@@ -775,7 +804,9 @@ app.get('/admin/orders/export', async (c) => {
       (Number(order.total) + Number(order.deliveryFee)).toFixed(2),
       order.items.map((item) => `${item.quantity}x ${item.productName}`).join(' | '),
     ]),
-  ].map((row) => row.map(csvCell).join(',')).join('\n');
+  ]
+    .map((row) => row.map(csvCell).join(','))
+    .join('\n');
   c.header('Content-Type', 'text/csv; charset=utf-8');
   c.header('Content-Disposition', 'attachment; filename="pedidos-la-yeka.csv"');
   return c.body(`\uFEFF${lines}`);
@@ -824,7 +855,13 @@ const cashSummaryForShift = async (openedAt: Date, closedAt?: Date | null) => {
       createdAt: { gte: openedAt, ...(closedAt ? { lte: closedAt } : {}) },
       status: { not: 'CANCELLED' },
     },
-    select: { paymentMethod: true, paymentStatus: true, status: true, total: true, deliveryFee: true },
+    select: {
+      paymentMethod: true,
+      paymentStatus: true,
+      status: true,
+      total: true,
+      deliveryFee: true,
+    },
   });
   return orders.reduce(
     (summary, order) => {
@@ -832,7 +869,8 @@ const cashSummaryForShift = async (openedAt: Date, closedAt?: Date | null) => {
       const amount = Number(order.total) + Number(order.deliveryFee);
       summary.completedOrders += 1;
       if (order.paymentMethod === 'CASH') summary.cash += amount;
-      if (order.paymentMethod === 'YAPE' && order.paymentStatus === 'VERIFIED') summary.yape += amount;
+      if (order.paymentMethod === 'YAPE' && order.paymentStatus === 'VERIFIED')
+        summary.yape += amount;
       return summary;
     },
     { cash: 0, yape: 0, completedOrders: 0 },
@@ -843,7 +881,11 @@ app.get('/admin/cash-shifts', async (c) => {
     return c.json({ error: 'No autorizado' }, 401);
   const [openShift, recent] = await Promise.all([
     db.cashShift.findFirst({ where: { closedAt: null }, orderBy: { openedAt: 'desc' } }),
-    db.cashShift.findMany({ where: { closedAt: { not: null } }, orderBy: { closedAt: 'desc' }, take: 10 }),
+    db.cashShift.findMany({
+      where: { closedAt: { not: null } },
+      orderBy: { closedAt: 'desc' },
+      take: 10,
+    }),
   ]);
   return c.json({
     openShift: openShift
@@ -861,13 +903,20 @@ app.post('/admin/cash-shifts', async (c) => {
     return c.json({ error: 'Ya hay una caja abierta. Ciérrala antes de iniciar otro turno.' }, 409);
   try {
     const shift = await db.cashShift.create({
-      data: { openedById: admin.id, openingAmount: parsed.data.openingAmount, notes: parsed.data.notes },
+      data: {
+        openedById: admin.id,
+        openingAmount: parsed.data.openingAmount,
+        notes: parsed.data.notes,
+      },
     });
     await writeAudit(admin, 'CREATE', 'CASH_SHIFT', shift.id, 'Abrió turno de caja');
     return c.json(shift, 201);
   } catch (cause) {
     if (typeof cause === 'object' && cause && 'code' in cause && cause.code === 'P2002')
-      return c.json({ error: 'Ya hay una caja abierta. Actualiza los datos antes de iniciar otro turno.' }, 409);
+      return c.json(
+        { error: 'Ya hay una caja abierta. Actualiza los datos antes de iniciar otro turno.' },
+        409,
+      );
     throw cause;
   }
 });
@@ -881,7 +930,11 @@ app.patch('/admin/cash-shifts/:id/close', async (c) => {
     if (current.closedAt) return c.json({ error: 'Este turno ya fue cerrado.' }, 409);
     const shift = await db.cashShift.update({
       where: { id: current.id },
-      data: { closingAmount: parsed.data.closingAmount, notes: parsed.data.notes ?? current.notes, closedAt: new Date() },
+      data: {
+        closingAmount: parsed.data.closingAmount,
+        notes: parsed.data.notes ?? current.notes,
+        closedAt: new Date(),
+      },
     });
     await writeAudit(admin, 'UPDATE', 'CASH_SHIFT', shift.id, 'Cerró turno de caja');
     return c.json({ ...shift, summary: await cashSummaryForShift(shift.openedAt, shift.closedAt) });
@@ -944,7 +997,10 @@ app.patch('/admin/orders/:id', async (c) => {
     return c.json(order);
   } catch (cause) {
     if (cause instanceof Error && cause.message === 'ORDER_STATE_CONFLICT')
-      return c.json({ error: 'El pedido cambió mientras lo actualizabas. Actualiza e inténtalo otra vez.' }, 409);
+      return c.json(
+        { error: 'El pedido cambió mientras lo actualizabas. Actualiza e inténtalo otra vez.' },
+        409,
+      );
     return c.json({ error: 'Pedido no encontrado.' }, 404);
   }
 });
