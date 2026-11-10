@@ -855,19 +855,19 @@ function Admin() {
       </main>
     );
   return (
-    <main className="admin-shell-enter h-[100dvh] overflow-hidden bg-[#f7f8fc] font-sans text-slate-950">
+    <main className="admin-shell-enter h-[100dvh] w-full max-w-full overflow-x-clip bg-[#f7f8fc] font-sans text-slate-950">
       <header className="sticky top-0 z-40 border-b border-amber-400/35 bg-[#101010] text-white shadow-[0_5px_18px_rgba(0,0,0,0.22)]">
         <div className="relative flex h-[68px] w-full items-center justify-between gap-3 px-4 sm:px-6">
           <span className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-amber-400/70 via-amber-200/20 to-transparent" />
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <div className="flex h-10 w-12 items-center justify-center overflow-hidden rounded-xl border border-amber-400/30 bg-[#1d1d1d] px-1 shadow-inner shadow-black/40 sm:h-11 sm:w-14">
               <img src={brandLogo} alt="La Yeka" className="max-h-10 w-auto object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-[10px] font-bold tracking-[0.18em] text-amber-300 sm:text-xs">
                 LA YEKA · ADMINISTRACIÓN
               </p>
-              <h1 className="mt-0.5 text-sm font-semibold text-white sm:text-[15px]">
+              <h1 className="mt-0.5 truncate text-sm font-semibold text-white sm:text-[15px]">
                 Hola, {user}
               </h1>
             </div>
@@ -996,7 +996,7 @@ function Admin() {
         </nav>
       </aside>
       <section
-        className={`flex h-[calc(100dvh-68px)] min-w-0 flex-col px-4 pb-24 pt-4 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'overflow-hidden' : 'overflow-y-auto'} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}
+        className={`flex h-[calc(100dvh-68px)] min-w-0 flex-col overflow-y-auto px-4 pb-24 pt-4 sm:px-6 lg:px-8 xl:pb-8 ${view === 'products' ? 'xl:overflow-hidden' : ''} ${sidebarCompact ? 'xl:ml-20' : 'xl:ml-60'}`}
       >
         {error && (
           <p
@@ -1086,7 +1086,7 @@ function Admin() {
           />
         )}
         {view === 'products' && (
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 flex-1 flex-col pb-20 xl:pb-0">
             <div className="mb-3 grid gap-3 sm:grid-cols-3">
               <Stat compact value={products.length} label="Productos registrados" />
               <Stat compact value={available} label="A la venta" tone="green" />
@@ -1135,7 +1135,7 @@ function Admin() {
                 <option value="paused">Pausados</option>
               </select>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 sm:p-4">
+            <div className="min-h-[18rem] flex-1 rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/30 sm:p-4 xl:min-h-0 xl:overflow-y-auto">
               <div className="grid grid-cols-[repeat(auto-fill,minmax(205px,1fr))] gap-4">
                 {loading ? (
                   <div className="col-span-full">
